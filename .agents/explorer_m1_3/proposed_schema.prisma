@@ -1,0 +1,88 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Cafe {
+  id          String     @id @default(uuid())
+  slug        String     @unique
+  name        String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  menuItems   MenuItem[]
+  orders      Order[]
+  customers   Customer[]
+  referrals   Referral[]
+}
+
+model User {
+  id                String     @id @default(uuid())
+  email             String     @unique
+  name              String?
+  role              String     @default("CUSTOMER") // SUPERADMIN, OWNER, STAFF, CUSTOMER
+  createdAt         DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  customers         Customer[]
+  referralsReceived Referral[] @relation("ReferredRelation")
+}
+
+model Customer {
+  id            String     @id @default(uuid())
+  cafeId        String
+  userId        String
+  points        Int        @default(0)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  cafe          Cafe       @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  referralsMade Referral[] @relation("ReferrerRelation")
+
+  @@unique([cafeId, userId])
+}
+
+model MenuItem {
+  id          String   @id @default(uuid())
+  cafeId      String
+  name        String
+  description String?
+  price       Int      // in paise
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  cafe        Cafe     @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+}
+
+model Order {
+  id          String   @id @default(uuid())
+  cafeId      String
+  totalAmount Int      // in paise
+  status      String   @default("PENDING") // PENDING, PREPARING, READY, COMPLETED, CANCELLED
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  cafe        Cafe     @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+}
+
+model Referral {
+  id             String    @id @default(uuid())
+  cafeId         String
+  referrerId     String    // The Customer who refers
+  referredId     String    // The User who was referred (before they become a customer)
+  completed      Boolean   @default(false)
+  pointsAwarded  Int       @default(0)
+  completedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  cafe           Cafe      @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  referrer       Customer  @relation("ReferrerRelation", fields: [referrerId], references: [id], onDelete: Cascade)
+  referred       User      @relation("ReferredRelation", fields: [referredId], references: [id], onDelete: Cascade)
+}

@@ -1,0 +1,118 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Cafe {
+  id        String     @id @default(uuid())
+  slug      String     @unique
+  name      String
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  menuItems MenuItem[]
+  orders    Order[]
+  customers Customer[]
+  referrals Referral[]
+}
+
+model User {
+  id        String     @id @default(uuid())
+  email     String     @unique
+  password  String?
+  name      String?
+  role      String     @default("CUSTOMER")
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  customers Customer[]
+}
+
+model Customer {
+  id             String     @id @default(uuid())
+  cafeId         String
+  userId         String
+  points         Int        @default(0)
+  tier           String     @default("BRONZE")
+  streakCount    Int        @default(0)
+  streakCalendar String     @default("[]")
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  cafe          Cafe       @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders        Order[]
+  referralsMade Referral[] @relation("ReferrerRelation")
+  referredBy    Referral?  @relation("ReferredRelation")
+
+  @@unique([cafeId, userId])
+}
+
+model MenuItem {
+  id          String      @id @default(uuid())
+  cafeId      String
+  name        String
+  description String?
+  price       Int
+  category    String      @default("beverages")
+  isAvailable Boolean     @default(true)
+  imageUrl    String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  cafe       Cafe        @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  orderItems OrderItem[]
+}
+
+model Order {
+  id            String      @id @default(uuid())
+  cafeId        String
+  customerId    String?
+  totalAmount   Int
+  status        String      @default("PENDING")
+  paymentMethod String      @default("CASH")
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  cafe       Cafe        @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  customer   Customer?   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  orderItems OrderItem[]
+}
+
+model OrderItem {
+  id         String   @id @default(uuid())
+  orderId    String
+  menuItemId String
+  quantity   Int
+  price      Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  order    Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+}
+
+model Referral {
+  id            String   @id @default(uuid())
+  cafeId        String
+  referrerId    String
+  referredId    String   @unique
+  status        String   @default("PENDING")
+  pointsAwarded Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  cafe     Cafe     @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  referrer Customer @relation("ReferrerRelation", fields: [referrerId], references: [id], onDelete: Cascade)
+  referred Customer @relation("ReferredRelation", fields: [referredId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  actorId   String
+  targetId  String?
+  action    String
+  metadata  String   @default("{}")
+  createdAt DateTime @default(now())
+}
