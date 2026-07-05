@@ -12,10 +12,10 @@ prisma generate --schema "$SCHEMA"
 # landing page still goes live.
 if [ -n "$DATABASE_URL" ]; then
   echo "DATABASE_URL detected — pushing schema and seeding…"
-  # Neon's pooled connection can't run schema DDL — use the unpooled URL for db push.
+  # Neon's pooled connection can't run schema DDL — use the unpooled URL.
   PUSH_URL="${DATABASE_URL_UNPOOLED:-${POSTGRES_URL_NON_POOLING:-$DATABASE_URL}}"
-  DATABASE_URL="$PUSH_URL" prisma db push --schema "$SCHEMA" --skip-generate --accept-data-loss
-  npx tsx prisma/seed.ts || echo "seed skipped (non-fatal)"
+  prisma db push --schema "$SCHEMA" --url "$PUSH_URL" --accept-data-loss
+  DATABASE_URL="$PUSH_URL" npx tsx prisma/seed.ts || echo "seed skipped (non-fatal)"
 else
   echo "No DATABASE_URL set — skipping db push/seed."
 fi
