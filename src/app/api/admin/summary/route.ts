@@ -61,10 +61,11 @@ export async function GET() {
         slug: cafe.slug,
         city: "Unassigned",
         plan: "Growth",
+        isActive: cafe.isActive,
         mrr: orders7d > 0 ? MONTHLY_PLAN_AMOUNT : 0,
         lastActivity: timeAgo(cafe.orders[0]?.createdAt || null),
         orders7d,
-        status: orders7d > 0 ? "active" : "trial",
+        status: !cafe.isActive ? "disabled" : orders7d > 0 ? "active" : "trial",
       };
     }),
   });

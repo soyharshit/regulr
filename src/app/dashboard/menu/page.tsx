@@ -9,13 +9,14 @@ interface MenuRow {
   category: string;
   isAvailable: boolean;
   description: string | null;
+  imageUrl: string | null;
 }
 
 export default function MenuManagementPage() {
   const [cafeId, setCafeId] = useState('');
   const [items, setItems] = useState<MenuRow[]>([]);
   const [importError, setImportError] = useState<string | null>(null);
-  const [form, setForm] = useState({ name: '', price: '', category: 'beverages' });
+  const [form, setForm] = useState({ name: '', price: '', category: 'beverages', imageUrl: '' });
 
   const load = useCallback(async () => {
     const summary = await fetch('/api/dashboard/summary');
@@ -42,9 +43,10 @@ export default function MenuManagementPage() {
         name: form.name,
         price: Math.round(Number(form.price) * 100),
         category: form.category,
+        imageUrl: form.imageUrl.trim() || undefined,
       }),
     });
-    setForm({ name: '', price: '', category: 'beverages' });
+    setForm({ name: '', price: '', category: 'beverages', imageUrl: '' });
     load();
   };
 
@@ -53,6 +55,17 @@ export default function MenuManagementPage() {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ cafeId, id: item.id, isAvailable: !item.isAvailable }),
+    });
+    load();
+  };
+
+  const setImage = async (item: MenuRow) => {
+    const url = window.prompt(`Image URL for "${item.name}"`, item.imageUrl || '');
+    if (url === null) return;
+    await fetch('/api/menu', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cafeId, id: item.id, imageUrl: url.trim() || null }),
     });
     load();
   };
@@ -142,10 +155,10 @@ export default function MenuManagementPage() {
           className="flex-1 min-w-[140px] px-3 py-2 rounded-control border border-border text-sm"
         />
         <input
-          placeholder="Price (paise)"
+          placeholder="Price (₹)"
           value={form.price}
           onChange={(e) => setForm({ ...form, price: e.target.value })}
-          className="w-32 px-3 py-2 rounded-control border border-border text-sm"
+          className="w-28 px-3 py-2 rounded-control border border-border text-sm"
         />
         <select
           value={form.category}
@@ -156,6 +169,12 @@ export default function MenuManagementPage() {
           <option value="food">Food</option>
           <option value="desserts">Desserts</option>
         </select>
+        <input
+          placeholder="Image URL (optional)"
+          value={form.imageUrl}
+          onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
+          className="flex-1 min-w-[140px] px-3 py-2 rounded-control border border-border text-sm"
+        />
         <button type="button" onClick={addItem} className="px-4 py-2 rounded-control bg-primary text-white text-sm font-semibold">
           Add item
         </button>
@@ -165,6 +184,7 @@ export default function MenuManagementPage() {
         <table className="w-full text-sm">
           <thead className="bg-bg-subtle">
             <tr>
+              <th className="text-left px-4 py-2 w-14">Image</th>
               <th className="text-left px-4 py-2">Name</th>
               <th className="text-left px-4 py-2">Category</th>
               <th className="text-right px-4 py-2">Price</th>
@@ -174,16 +194,33 @@ export default function MenuManagementPage() {
           </thead>
           <tbody className="divide-y divide-border">
             {items.map((item) => (
-              <tr key={item.id}>
+              <tr key={item.id} className={item.isAvailable ? '' : 'opacity-55'}>
+                <td className="px-4 py-2">
+                  {item.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={item.imageUrl} alt={item.name} className="w-10 h-10 rounded-control object-cover" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-control bg-bg-subtle border border-border" />
+                  )}
+                </td>
                 <td className="px-4 py-2 font-medium">{item.name}</td>
                 <td className="px-4 py-2 capitalize">{item.category}</td>
                 <td className="px-4 py-2 text-right tabular-nums">₹{(item.price / 100).toFixed(0)}</td>
                 <td className="px-4 py-2 text-center">
-                  <button type="button" onClick={() => toggleAvailable(item)} className="text-xs font-semibold text-primary">
-                    {item.isAvailable ? 'Yes' : 'No'}
+                  <button
+                    type="button"
+                    onClick={() => toggleAvailable(item)}
+                    className={`text-xs font-semibold px-2 py-0.5 rounded-pill ${
+                      item.isAvailable ? 'bg-success-soft text-success' : 'bg-bg-subtle text-ink-3 border border-border'
+                    }`}
+                  >
+                    {item.isAvailable ? 'Available' : 'Sold out'}
                   </button>
                 </td>
-                <td className="px-4 py-2 text-right">
+                <td className="px-4 py-2 text-right whitespace-nowrap">
+                  <button type="button" onClick={() => setImage(item)} className="text-xs text-ink-2 font-semibold mr-3">
+                    Image
+                  </button>
                   <button type="button" onClick={() => removeItem(item.id)} className="text-xs text-error font-semibold">
                     Delete
                   </button>

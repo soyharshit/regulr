@@ -9,12 +9,31 @@ import { TIER_THRESHOLDS, nextTier, tierForPoints, REFERRAL_REFERRER_BONUS, REFE
 import { referralCodeForCustomer } from '@/lib/repositories/referralCode';
 import StorefrontClient from './StorefrontClient';
 
-export default async function StorefrontPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function StorefrontPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ table?: string }>;
+}) {
   const { slug } = await params;
+  const { table } = await searchParams;
+  const tableNumber = table && /^\d+$/.test(table) ? Number(table) : null;
   const cafe = await getBySlug(slug);
 
   if (!cafe) {
     notFound();
+  }
+
+  if (!cafe.isActive) {
+    return (
+      <div className="min-h-screen bg-bg-subtle flex items-center justify-center p-6">
+        <div className="bg-white rounded-card shadow-card p-8 max-w-sm text-center space-y-2">
+          <h1 className="font-display font-bold text-xl text-ink">{cafe.name}</h1>
+          <p className="text-sm text-ink-2">This store is temporarily unavailable. Please check back soon.</p>
+        </div>
+      </div>
+    );
   }
 
   const menuItems = await listBySlug(slug);
@@ -81,6 +100,7 @@ export default async function StorefrontPage({ params }: { params: Promise<{ slu
       isSignedIn={!!sessionUser?.id}
       referrerBonus={REFERRAL_REFERRER_BONUS}
       referredBonus={REFERRAL_REFERRED_BONUS}
+      tableNumber={tableNumber}
     />
   );
 }

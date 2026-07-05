@@ -13,6 +13,7 @@ interface OrderCard {
   id: string;
   status: string;
   totalAmount: number;
+  tableNumber?: number | null;
   createdAt: string;
   customer?: { user?: { name?: string | null } };
   orderItems: { quantity: number; menuItem: { name: string } }[];
@@ -136,7 +137,18 @@ export default function OrdersKanbanPage() {
                     .join(', ');
                   return (
                     <div key={order.id} className="rounded-control bg-white p-3 shadow-card text-sm">
-                      <p className="font-semibold text-ink">#{order.id.slice(0, 8)}</p>
+                      <div className="flex items-center justify-between">
+                        <p className="font-semibold text-ink">#{order.id.slice(0, 8)}</p>
+                        {order.tableNumber != null ? (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-pill bg-primary-soft text-primary">
+                            Table {order.tableNumber}
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-pill bg-bg-subtle text-ink-3 border border-border">
+                            Takeaway
+                          </span>
+                        )}
+                      </div>
                       <p className="text-xs text-ink-3 mt-1 line-clamp-2">{items}</p>
                       <p className="text-xs text-ink-2 mt-1">
                         {order.customer?.user?.name || 'Walk-in'} · {formatPaise(order.totalAmount)}

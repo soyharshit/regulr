@@ -33,9 +33,11 @@ export async function generateTableQRPack(
   // Generate QR code data URLs for each table
   const tableQRs: { table: number; dataUrl: string; url: string }[] = [];
 
-  const origin = baseUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
+  // Path-based storefront URL so the QR works on any host (e.g. *.vercel.app)
+  // without requiring per-cafe subdomains.
+  const origin = baseUrl.replace(/\/$/, '');
   for (let table = 1; table <= tablesCount; table++) {
-    const url = `https://${slug}.${origin}?table=${table}`;
+    const url = `${origin}/store/${slug}?table=${table}`;
     const dataUrl = await QRCode.toDataURL(url, {
       width: 200,
       margin: 1,

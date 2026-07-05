@@ -22,8 +22,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Cafe not found" }, { status: 404 });
   }
 
-  const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN || "regulr.in";
-  const pdf = await generateTableQRPack(cafe.id, tables, cafe.name, cafe.slug, rootDomain);
+  // Use the real request origin so QR codes point at this deployment.
+  const origin = request.nextUrl.origin;
+  const pdf = await generateTableQRPack(cafe.id, tables, cafe.name, cafe.slug, origin);
 
   return new NextResponse(new Uint8Array(pdf), {
     status: 200,

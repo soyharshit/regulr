@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { cafeId, items, paymentMethod, couponCode, pointsToRedeem } = body;
+    const { cafeId, items, paymentMethod, couponCode, pointsToRedeem, tableNumber } = body;
 
     if (!cafeId || !items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ error: 'cafeId and items are required' }, { status: 400 });
@@ -97,11 +97,13 @@ export async function POST(request: NextRequest) {
       gstRate: GST_RATE,
     });
 
+    const parsedTable = Number(tableNumber);
     const payload = {
       subtotalAmount: subtotal,
       discountAmount: pricing.couponDiscount + pricing.tierDiscount,
       couponCode: resolvedCoupon ? resolvedCoupon.code : null,
       pointsRedeemed: pointsToApply,
+      tableNumber: Number.isInteger(parsedTable) && parsedTable > 0 ? parsedTable : null,
       totalAmount: pricing.grandTotal,
       status: 'PENDING',
       paymentMethod: paymentMethod || 'CASH',

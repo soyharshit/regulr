@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Store, Globe, QrCode } from 'lucide-react';
+import { Store, Globe, QrCode, Download } from 'lucide-react';
 
 interface CafeInfo {
   id: string;
@@ -13,16 +13,50 @@ interface CafeInfo {
 export default function SettingsPage() {
   const [cafe, setCafe] = useState<CafeInfo | null>(null);
   const [loading, setLoading] = useState(true);
+  const [name, setName] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [status, setStatus] = useState<{ text: string; ok: boolean } | null>(null);
+  const [origin, setOrigin] = useState('');
 
   useEffect(() => {
+    setOrigin(window.location.origin);
     fetch('/api/dashboard/summary')
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         setCafe(d?.cafe || null);
+        setName(d?.cafe?.name || '');
         setLoading(false);
       })
       .catch(() => setLoading(false));
   }, []);
+
+  const save = async () => {
+    if (!name.trim()) return;
+    setSaving(true);
+    setStatus(null);
+    try {
+      const res = await fetch('/api/cafe', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setStatus({ text: data.error || 'Could not save', ok: false });
+      } else {
+        setCafe((c) => (c ? { ...c, name: data.name } : c));
+        setStatus({ text: 'Saved', ok: true });
+        setTimeout(() => setStatus(null), 2000);
+      }
+    } catch {
+      setStatus({ text: 'Network error', ok: false });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const storefrontUrl = cafe ? `${origin}/store/${cafe.slug}` : '';
+  const dirty = cafe ? name.trim() !== cafe.name : false;
 
   return (
     <div className="p-4 lg:p-6 space-y-6 max-w-2xl">
@@ -35,10 +69,7 @@ export default function SettingsPage() {
 
       {!loading && !cafe && (
         <div className="rounded-card bg-white p-5 shadow-card">
-          <p className="text-sm text-ink-2">
-            Cafe profile not found. Run <code className="font-mono text-xs bg-bg-subtle px-1.5 py-0.5 rounded">npm run seed:demo</code> to
-            create demo data.
-          </p>
+          <p className="text-sm text-ink-2">Cafe profile not found.</p>
         </div>
       )}
 
@@ -57,7 +88,8 @@ export default function SettingsPage() {
                 <label className="text-xs font-medium text-ink-2 block mb-1">Cafe name</label>
                 <input
                   type="text"
-                  defaultValue={cafe.name}
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
                   className="w-full px-3 py-2 rounded-control border border-border text-sm text-ink focus:outline-none focus:ring-2 focus:ring-primary/30"
                 />
               </div>
@@ -70,6 +102,19 @@ export default function SettingsPage() {
                   className="w-full px-3 py-2 rounded-control border border-border text-sm text-ink-2 font-mono bg-bg-subtle cursor-not-allowed"
                 />
               </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={save}
+                disabled={saving || !dirty || !name.trim()}
+                className="px-5 py-2 rounded-control bg-primary text-white font-semibold text-sm disabled:opacity-50"
+              >
+                {saving ? 'Saving…' : 'Save changes'}
+              </button>
+              {status && (
+                <span className={`text-sm font-medium ${status.ok ? 'text-success' : 'text-error'}`}>{status.text}</span>
+              )}
             </div>
             <p className="text-[11px] text-ink-3">
               Member since {new Date(cafe.createdAt).toLocaleDateString('en-IN', { year: 'numeric', month: 'long' })}
@@ -84,16 +129,14 @@ export default function SettingsPage() {
               </div>
               <h2 className="font-display font-bold text-base text-ink">Your Storefront</h2>
             </div>
-            <p className="text-sm text-ink-2">
-              Customers order directly at your branded page:
-            </p>
+            <p className="text-sm text-ink-2">Customers order directly at your branded page:</p>
             <a
-              href={process.env.NODE_ENV === 'development' ? `http://${cafe.slug}.localhost:3000` : `https://${cafe.slug}.regulr.in`}
+              href={storefrontUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-block px-3 py-2 rounded-control bg-bg-subtle border border-border text-sm font-mono text-primary hover:bg-bg-hover transition-colors"
+              className="inline-block px-3 py-2 rounded-control bg-bg-subtle border border-border text-sm font-mono text-primary hover:bg-bg-hover transition-colors break-all"
             >
-              {cafe.slug}.regulr.in
+              {storefrontUrl || `/store/${cafe.slug}`}
             </a>
           </div>
 
@@ -105,10 +148,13 @@ export default function SettingsPage() {
               </div>
               <h2 className="font-display font-bold text-base text-ink">Table QR Codes</h2>
             </div>
-            <p className="text-sm text-ink-2">
-              Your table QR pack is generated during onboarding. Need a fresh pack (new tables, rebranding)?
-              Contact Regulr support or your platform admin to regenerate it.
-            </p>
+            <p className="text-sm text-ink-2">Download a fresh QR pack for your tables anytime.</p>
+            <a
+              href={`/api/admin/qr?slug=${cafe.slug}&tables=12`}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-control border border-border text-ink font-semibold text-sm hover:bg-bg-subtle"
+            >
+              <Download size={15} /> Download QR pack
+            </a>
           </div>
         </>
       )}

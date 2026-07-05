@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ShoppingCart, Flame, Gift, Copy, Check, Minus, Plus, LogIn } from 'lucide-react';
+import { ShoppingCart, Flame, Gift, Copy, Check, Minus, Plus, LogIn, Utensils, Receipt } from 'lucide-react';
 
 interface Cafe {
   id: string;
@@ -17,6 +17,7 @@ interface MenuItem {
   price: number;
   category: string;
   isAvailable: boolean;
+  imageUrl?: string | null;
 }
 
 interface CartLine {
@@ -62,6 +63,7 @@ export default function StorefrontClient({
   isSignedIn,
   referrerBonus,
   referredBonus,
+  tableNumber,
 }: {
   cafe: Cafe;
   menuItems: MenuItem[];
@@ -70,6 +72,7 @@ export default function StorefrontClient({
   isSignedIn: boolean;
   referrerBonus: number;
   referredBonus: number;
+  tableNumber: number | null;
 }) {
   const router = useRouter();
   const [cart, setCart] = useState<CartLine[]>([]);
@@ -78,6 +81,13 @@ export default function StorefrontClient({
   const [redeemCode, setRedeemCode] = useState('');
   const [redeemMessage, setRedeemMessage] = useState<{ text: string; ok: boolean } | null>(null);
   const [redeeming, setRedeeming] = useState(false);
+
+  // Remember the table scanned from the QR code so it survives navigation to checkout.
+  useEffect(() => {
+    if (tableNumber != null) {
+      localStorage.setItem(`table_${cafe.id}`, String(tableNumber));
+    }
+  }, [tableNumber, cafe.id]);
 
   const categories = useMemo(() => Array.from(new Set(menuItems.map((m) => m.category))), [menuItems]);
 
@@ -173,12 +183,35 @@ export default function StorefrontClient({
                 <span className="status-dot status-dot--open" />
                 <span className="text-sm text-ink-2">Open now</span>
               </div>
-              <div className="pill bg-teal-soft text-teal text-xs !py-1 !px-2.5 font-semibold mt-2 inline-flex">
-                Direct prices — no commission markup
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                <div className="pill bg-teal-soft text-teal text-xs !py-1 !px-2.5 font-semibold inline-flex">
+                  Direct prices — no commission markup
+                </div>
+                {tableNumber != null && (
+                  <div className="pill bg-primary-soft text-primary text-xs !py-1 !px-2.5 font-semibold inline-flex items-center gap-1">
+                    <Utensils size={11} /> Table {tableNumber}
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </div>
+
+        {/* My orders (signed-in customers) */}
+        {isSignedIn && (
+          <a
+            href={`/store/${cafe.slug}/orders`}
+            className="rounded-card bg-white shadow-card p-3.5 mt-3 flex items-center justify-between hover:bg-bg-subtle transition-colors"
+          >
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-control bg-bg-subtle flex items-center justify-center">
+                <Receipt size={16} className="text-ink-2" />
+              </div>
+              <span className="text-sm font-semibold text-ink">My orders</span>
+            </div>
+            <span className="text-ink-3 text-sm">→</span>
+          </a>
+        )}
 
         {/* Loyalty */}
         <div className="rounded-card bg-white shadow-card p-4 mt-3">
@@ -298,6 +331,14 @@ export default function StorefrontClient({
               const qty = quantityFor(item.id);
               return (
                 <div key={item.id} className="bg-white rounded-card shadow-card p-4 flex items-center justify-between gap-3">
+                  {item.imageUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={item.imageUrl}
+                      alt={item.name}
+                      className="w-16 h-16 rounded-control object-cover flex-shrink-0"
+                    />
+                  )}
                   <div className="min-w-0 flex-1">
                     <h3 className="font-semibold text-ink text-sm">{item.name}</h3>
                     {item.description && (

@@ -34,6 +34,8 @@ export default function CheckoutClient({ cafe }: { cafe: Cafe }) {
   const [redeemPoints, setRedeemPoints] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [tableNumber, setTableNumber] = useState<number | null>(null);
+
   useEffect(() => {
     const savedCart = localStorage.getItem(`cart_${cafe.id}`);
     if (savedCart) {
@@ -41,6 +43,8 @@ export default function CheckoutClient({ cafe }: { cafe: Cafe }) {
     } else {
       router.push(`/store/${cafe.slug}`);
     }
+    const savedTable = localStorage.getItem(`table_${cafe.id}`);
+    if (savedTable && /^\d+$/.test(savedTable)) setTableNumber(Number(savedTable));
   }, [cafe.id, cafe.slug, router]);
 
   useEffect(() => {
@@ -76,6 +80,7 @@ export default function CheckoutClient({ cafe }: { cafe: Cafe }) {
           paymentMethod,
           couponCode: couponCode.trim() || undefined,
           pointsToRedeem: pointsToRedeem || undefined,
+          tableNumber: tableNumber ?? undefined,
         }),
       });
 
@@ -87,6 +92,7 @@ export default function CheckoutClient({ cafe }: { cafe: Cafe }) {
       }
 
       localStorage.removeItem(`cart_${cafe.id}`);
+      localStorage.removeItem(`table_${cafe.id}`);
       router.push(`/store/${cafe.slug}/order/${data.id}`);
     } catch {
       setError('Network error. Please try again.');
@@ -109,7 +115,14 @@ export default function CheckoutClient({ cafe }: { cafe: Cafe }) {
           <ArrowLeft size={18} className="mr-1" /> Back to menu
         </button>
 
-        <h1 className="font-display text-2xl font-bold mb-6 text-ink">Checkout</h1>
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="font-display text-2xl font-bold text-ink">Checkout</h1>
+          {tableNumber != null && (
+            <span className="pill bg-primary-soft text-primary text-xs !py-1 !px-2.5 font-semibold">
+              Table {tableNumber}
+            </span>
+          )}
+        </div>
 
         <div className="bg-white rounded-card shadow-card p-4 mb-4">
           <h2 className="font-semibold text-ink mb-3">Order summary</h2>

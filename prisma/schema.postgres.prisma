@@ -13,6 +13,7 @@ model Cafe {
   id          String        @id @default(uuid())
   slug        String        @unique
   name        String
+  isActive    Boolean       @default(true)
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   menuItems   MenuItem[]
@@ -89,6 +90,7 @@ model Order {
   id              String      @id @default(uuid())
   cafeId          String
   customerId      String?     // Nullable for walk-ins/guest checkouts
+  tableNumber     Int?        // dine-in table (from the QR code), null for takeaway
   subtotalAmount  Int         @default(0) // in paise, before discounts
   discountAmount  Int         @default(0) // in paise, coupon + points redemption combined
   couponCode      String?
