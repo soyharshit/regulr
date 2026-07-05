@@ -1,5 +1,8 @@
+// PRODUCTION schema (Postgres) — used by the Vercel build via `--schema prisma/schema.postgres.prisma`.
+// KEEP THE MODELS IDENTICAL to prisma/schema.prisma (local SQLite) — only the datasource provider differs.
+
 generator client {
-  provider = "prisma-client-js"
+  provider   = "prisma-client-js"
 }
 
 datasource db {
@@ -7,44 +10,58 @@ datasource db {
 }
 
 model Cafe {
-  id        String     @id @default(uuid())
-  slug      String     @unique
-  name      String
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  menuItems MenuItem[]
-  orders    Order[]
-  customers Customer[]
-  referrals Referral[]
+  id          String        @id @default(uuid())
+  slug        String        @unique
+  name        String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  menuItems   MenuItem[]
+  orders      Order[]
+  customers   Customer[]
+  referrals   Referral[]
+  settings    CafeSettings?
+}
+
+model CafeSettings {
+  id               String   @id @default(uuid())
+  cafeId           String   @unique
+  loyaltyEnabled   Boolean  @default(true)
+  pointsPerRupee   Float    @default(1)
+  streakMilestones String   @default("[3,7,14,30]") // JSON array of numbers
+  coupons          String   @default("[]") // JSON array of { code, discountPercent?, discountPaise?, maxUses? }
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  cafe             Cafe     @relation(fields: [cafeId], references: [id], onDelete: Cascade)
 }
 
 model User {
-  id        String     @id @default(uuid())
-  email     String     @unique
-  password  String?
-  name      String?
-  role      String     @default("CUSTOMER")
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  customers Customer[]
+  id            String     @id @default(uuid())
+  email         String     @unique
+  password      String?    // optional, for credential-based logins (e.g., owner/admin accounts)
+  name          String?
+  role          String     @default("CUSTOMER") // SUPERADMIN, OWNER, STAFF, CUSTOMER
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  customers     Customer[]
 }
 
 model Customer {
-  id             String     @id @default(uuid())
-  cafeId         String
-  userId         String
-  points         Int        @default(0)
-  tier           String     @default("BRONZE")
-  streakCount    Int        @default(0)
-  streakCalendar String     @default("[]")
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
+  id              String     @id @default(uuid())
+  cafeId          String
+  userId          String
+  points          Int        @default(0)
+  tier            String     @default("BRONZE") // BRONZE, SILVER, GOLD, PLATINUM
+  streakCount     Int        @default(0)
+  streakCalendar  String     @default("[]") // JSON serialized array of ISO date strings (e.g. '["2026-07-04"]')
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
 
-  cafe          Cafe       @relation(fields: [cafeId], references: [id], onDelete: Cascade)
-  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  orders        Order[]
-  referralsMade Referral[] @relation("ReferrerRelation")
-  referredBy    Referral?  @relation("ReferredRelation")
+  cafe            Cafe       @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders          Order[]
+  referralsMade   Referral[] @relation("ReferrerRelation")
+  referredBy      Referral?  @relation("ReferredRelation")
 
   @@unique([cafeId, userId])
 }
@@ -54,30 +71,35 @@ model MenuItem {
   cafeId      String
   name        String
   description String?
-  price       Int
+  price       Int         // in paise
   category    String      @default("beverages")
   isAvailable Boolean     @default(true)
   imageUrl    String?
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
-  cafe       Cafe        @relation(fields: [cafeId], references: [id], onDelete: Cascade)
-  orderItems OrderItem[]
+  cafe        Cafe        @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  orderItems  OrderItem[]
 }
 
 model Order {
-  id            String      @id @default(uuid())
-  cafeId        String
-  customerId    String?
-  totalAmount   Int
-  status        String      @default("PENDING")
-  paymentMethod String      @default("CASH")
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  id              String      @id @default(uuid())
+  cafeId          String
+  customerId      String?     // Nullable for walk-ins/guest checkouts
+  subtotalAmount  Int         @default(0) // in paise, before discounts
+  discountAmount  Int         @default(0) // in paise, coupon + points redemption combined
+  couponCode      String?
+  pointsRedeemed  Int         @default(0)
+  pointsEarned    Int         @default(0) // awarded on completion
+  totalAmount     Int         // in paise, final amount charged
+  status          String      @default("PENDING") // PENDING, PREPARING, READY, COMPLETED, CANCELLED
+  paymentMethod   String      @default("CASH") // CASH, UPI, RAZORPAY
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
 
-  cafe       Cafe        @relation(fields: [cafeId], references: [id], onDelete: Cascade)
-  customer   Customer?   @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  orderItems OrderItem[]
+  cafe            Cafe        @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  customer        Customer?   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  orderItems      OrderItem[]
 }
 
 model OrderItem {
@@ -85,12 +107,12 @@ model OrderItem {
   orderId    String
   menuItemId String
   quantity   Int
-  price      Int
+  price      Int      // in paise (historical price at time of purchase)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  order    Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  menuItem MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
 }
 
 model Referral {
@@ -98,21 +120,21 @@ model Referral {
   cafeId        String
   referrerId    String
   referredId    String   @unique
-  status        String   @default("PENDING")
+  status        String   @default("PENDING") // PENDING, COMPLETED
   pointsAwarded Int      @default(0)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  cafe     Cafe     @relation(fields: [cafeId], references: [id], onDelete: Cascade)
-  referrer Customer @relation("ReferrerRelation", fields: [referrerId], references: [id], onDelete: Cascade)
-  referred Customer @relation("ReferredRelation", fields: [referredId], references: [id], onDelete: Cascade)
+  cafe          Cafe     @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  referrer      Customer @relation("ReferrerRelation", fields: [referrerId], references: [id], onDelete: Cascade)
+  referred      Customer @relation("ReferredRelation", fields: [referredId], references: [id], onDelete: Cascade)
 }
 
 model AuditLog {
   id        String   @id @default(uuid())
-  actorId   String
-  targetId  String?
-  action    String
-  metadata  String   @default("{}")
+  actorId   String   // who performed the action
+  targetId  String?  // who was impersonated
+  action    String   // e.g. "IMPERSONATE_START", "IMPERSONATE_END"
+  metadata  String   @default("{}") // JSON string
   createdAt DateTime @default(now())
 }

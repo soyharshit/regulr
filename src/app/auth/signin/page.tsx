@@ -1,14 +1,16 @@
 'use client';
-import { signIn } from 'next-auth/react';
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { signIn, getSession } from 'next-auth/react';
+import { useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function SignInPage() {
+function SignInForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const next = searchParams.get('next');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,12 +24,22 @@ export default function SignInPage() {
     if (result?.error) {
       setError('Invalid email or password');
       setLoading(false);
+      return;
+    }
+
+    if (next) {
+      router.push(next);
+      return;
+    }
+
+    const session = await getSession();
+    const role = (session?.user as { role?: string } | undefined)?.role;
+    if (role === 'SUPERADMIN') {
+      router.push('/admin');
+    } else if (role === 'OWNER' || role === 'STAFF') {
+      router.push('/dashboard');
     } else {
-      if (email === 'superadmin@regulr.in') {
-        router.push('/admin');
-      } else {
-        router.push('/dashboard');
-      }
+      router.push('/');
     }
   };
 
@@ -72,5 +84,13 @@ export default function SignInPage() {
         </form>
       </div>
     </main>
+  );
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense fallback={null}>
+      <SignInForm />
+    </Suspense>
   );
 }

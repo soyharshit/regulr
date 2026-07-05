@@ -10,6 +10,7 @@
     "db:generate": "prisma generate",
     "db:generate:postgres": "prisma generate --schema prisma/schema.postgres.prisma",
     "db:push:postgres": "prisma db push --schema prisma/schema.postgres.prisma",
+    "seed:postgres": "prisma generate --schema prisma/schema.postgres.prisma && npx tsx prisma/seed.ts",
     "test": "node scripts/prepare-test-db.mjs ./test.db && cross-env DATABASE_URL=\"file:./test.db\" prisma db push --accept-data-loss && cross-env DATABASE_URL=\"file:./test.db\" vitest run",
     "test:watch": "vitest",
     "test:e2e": "cross-env DATABASE_URL=\"file:./prisma/test.db\" playwright test",

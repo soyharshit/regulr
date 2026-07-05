@@ -1,17 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-
-
-const DEFAULT_SETTINGS = {
-  loyaltyEnabled: true,
-  pointsPerRupee: 1,
-  streakMilestones: [3, 7, 14, 30],
-  coupons: [{ code: "WELCOME10", discountPaise: 1000, maxUses: 100 }],
-};
-
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-
 import { resolveCafeForSession } from "@/lib/repositories/cafe";
+import * as cafeSettingsRepo from "@/lib/repositories/cafeSettings";
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -19,10 +10,31 @@ export async function GET(request: NextRequest) {
   const cafe = await resolveCafeForSession(session, slug);
 
   if (!cafe) return NextResponse.json({ error: "Cafe not found" }, { status: 404 });
-  return NextResponse.json({ cafeId: cafe.id, ...DEFAULT_SETTINGS });
+
+  const settings = await cafeSettingsRepo.getByCafeId(cafe.id);
+  return NextResponse.json({ cafeId: cafe.id, ...settings });
 }
 
 export async function PUT(request: NextRequest) {
+  const session = await getServerSession(authOptions);
   const body = await request.json();
-  return NextResponse.json({ ...DEFAULT_SETTINGS, ...body, saved: true });
+  const slug = request.nextUrl.searchParams.get("slug");
+  const cafe = await resolveCafeForSession(session, slug || body.slug);
+
+  if (!cafe) return NextResponse.json({ error: "Cafe not found" }, { status: 404 });
+
+  const role = (session?.user as { role?: string } | undefined)?.role;
+  if (!session || (role !== "OWNER" && role !== "SUPERADMIN")) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { loyaltyEnabled, pointsPerRupee, streakMilestones, coupons } = body;
+  const saved = await cafeSettingsRepo.upsert(cafe.id, {
+    loyaltyEnabled,
+    pointsPerRupee,
+    streakMilestones,
+    coupons,
+  });
+
+  return NextResponse.json({ cafeId: cafe.id, ...saved, saved: true });
 }

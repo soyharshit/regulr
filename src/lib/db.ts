@@ -1,6 +1,4 @@
 import { PrismaClient } from "@prisma/client";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
-import { PrismaPg } from "@prisma/adapter-pg";
 
 const globalForPrisma = global as unknown as { prisma?: PrismaClient };
 
@@ -10,10 +8,14 @@ function getDatabaseUrl() {
 
 function createAdapter(databaseUrl: string) {
   if (databaseUrl.startsWith("postgres://") || databaseUrl.startsWith("postgresql://")) {
-    return new PrismaPg(databaseUrl);
+    // Lazy require so the native better-sqlite3 module is never pulled into a
+    // Postgres-only (e.g. Vercel serverless) bundle.
+    const { PrismaPg } = require("@prisma/adapter-pg");
+    return new PrismaPg({ connectionString: databaseUrl });
   }
 
   if (databaseUrl.startsWith("file:")) {
+    const { PrismaBetterSqlite3 } = require("@prisma/adapter-better-sqlite3");
     return new PrismaBetterSqlite3({ url: databaseUrl });
   }
 

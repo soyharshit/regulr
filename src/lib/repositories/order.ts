@@ -1,67 +1,67 @@
 import { db } from "../db";
-import { Order } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 
-export async function list(cafeId: string): Promise<Order[]> {
+const withItemsAndCustomer = Prisma.validator<Prisma.OrderDefaultArgs>()({
+  include: {
+    orderItems: { include: { menuItem: true } },
+    customer: { include: { user: true } },
+  },
+});
+
+const withItems = Prisma.validator<Prisma.OrderDefaultArgs>()({
+  include: { orderItems: { include: { menuItem: true } } },
+});
+
+const withPlainItems = Prisma.validator<Prisma.OrderDefaultArgs>()({
+  include: { orderItems: true },
+});
+
+export type OrderWithItemsAndCustomer = Prisma.OrderGetPayload<typeof withItemsAndCustomer>;
+export type OrderWithItems = Prisma.OrderGetPayload<typeof withItems>;
+export type OrderWithPlainItems = Prisma.OrderGetPayload<typeof withPlainItems>;
+
+export async function list(cafeId: string): Promise<OrderWithItemsAndCustomer[]> {
   return db.order.findMany({
     where: { cafeId },
-    include: {
-      orderItems: {
-        include: {
-          menuItem: true,
-        },
-      },
-      customer: {
-        include: {
-          user: true,
-        },
-      },
-    },
+    ...withItemsAndCustomer,
     orderBy: { createdAt: "desc" },
   });
 }
 
-export async function getById(cafeId: string, id: string): Promise<Order | null> {
+export async function getById(cafeId: string, id: string): Promise<OrderWithItemsAndCustomer | null> {
   return db.order.findFirst({
     where: { id, cafeId },
-    include: {
-      orderItems: {
-        include: {
-          menuItem: true,
-        },
-      },
-      customer: {
-        include: {
-          user: true,
-        },
-      },
-    },
+    ...withItemsAndCustomer,
   });
 }
 
-export async function getByIdPublic(id: string): Promise<Order | null> {
+export async function getByIdPublic(id: string): Promise<OrderWithItems | null> {
   return db.order.findUnique({
     where: { id },
-    include: { orderItems: { include: { menuItem: true } } },
+    ...withItems,
   });
 }
 
 export async function create(
   cafeId: string,
-  data: any
-): Promise<Order> {
-  if (data.customer?.connect?.id) {
+  data: Omit<Prisma.OrderCreateInput, "cafe">
+): Promise<OrderWithPlainItems> {
+  const customerConnect = (data as { customer?: { connect?: { id?: string } } }).customer?.connect?.id;
+  if (customerConnect) {
     const cust = await db.customer.findFirst({
-      where: { id: data.customer.connect.id, cafeId }
+      where: { id: customerConnect, cafeId },
     });
     if (!cust) throw new Error("Customer not found or unauthorized for this cafe");
   }
 
-  if (data.orderItems?.create) {
-    const items = Array.isArray(data.orderItems.create) ? data.orderItems.create : [data.orderItems.create];
-    for (const item of items) {
-      if (item.menuItem?.connect?.id) {
+  const orderItemsCreate = (data as { orderItems?: { create?: unknown } }).orderItems?.create;
+  if (orderItemsCreate) {
+    const items = Array.isArray(orderItemsCreate) ? orderItemsCreate : [orderItemsCreate];
+    for (const item of items as { menuItem?: { connect?: { id?: string } } }[]) {
+      const menuItemId = item.menuItem?.connect?.id;
+      if (menuItemId) {
         const m = await db.menuItem.findFirst({
-          where: { id: item.menuItem.connect.id, cafeId }
+          where: { id: menuItemId, cafeId },
         });
         if (!m) throw new Error("MenuItem not found or unauthorized for this cafe");
       }
@@ -73,9 +73,7 @@ export async function create(
       ...data,
       cafe: { connect: { id: cafeId } },
     },
-    include: {
-      orderItems: true,
-    },
+    ...withPlainItems,
   });
 }
 
@@ -83,7 +81,7 @@ export async function updateStatus(
   cafeId: string,
   id: string,
   status: string
-): Promise<Order> {
+): Promise<OrderWithPlainItems> {
   const existing = await db.order.findFirst({
     where: { id, cafeId },
   });
@@ -93,8 +91,6 @@ export async function updateStatus(
   return db.order.update({
     where: { id },
     data: { status },
-    include: {
-      orderItems: true,
-    },
+    ...withPlainItems,
   });
 }

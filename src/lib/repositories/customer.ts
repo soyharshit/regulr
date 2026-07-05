@@ -1,5 +1,6 @@
 import { db } from "../db";
 import { Customer, Prisma } from "@prisma/client";
+import { tierForPoints } from "../loyalty";
 
 export async function getByUserId(cafeId: string, userId: string): Promise<Customer | null> {
   return db.customer.findUnique({
@@ -36,6 +37,14 @@ export async function create(
   });
 }
 
+/** Finds a customer profile for this user at this cafe, creating one on first visit. */
+export async function findOrCreateForUser(cafeId: string, userId: string): Promise<Customer> {
+  const existing = await getByUserId(cafeId, userId);
+  if (existing) return existing;
+  return create(cafeId, { user: { connect: { id: userId } } });
+}
+
+/** Updates a customer's points and keeps their cached tier column in sync so it never drifts. */
 export async function updatePoints(
   cafeId: string,
   id: string,
@@ -49,7 +58,7 @@ export async function updatePoints(
   }
   return db.customer.update({
     where: { id },
-    data: { points },
+    data: { points, tier: tierForPoints(points) },
   });
 }
 

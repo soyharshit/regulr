@@ -7,7 +7,7 @@ const databaseUrl = process.env.DATABASE_URL || "file:./dev.db";
 
 function createAdapter() {
   if (databaseUrl.startsWith("postgres://") || databaseUrl.startsWith("postgresql://")) {
-    return new PrismaPg(databaseUrl);
+    return new PrismaPg({ connectionString: databaseUrl });
   }
 
   if (databaseUrl.startsWith("file:")) {
@@ -213,6 +213,21 @@ async function main() {
     });
     cafeRecords[cafeDef.slug] = cafe;
     console.log(`✓ Cafe: ${cafe.name} (${cafe.slug})`);
+
+    await db.cafeSettings.upsert({
+      where: { cafeId: cafe.id },
+      update: {},
+      create: {
+        cafeId: cafe.id,
+        loyaltyEnabled: true,
+        pointsPerRupee: 1,
+        streakMilestones: JSON.stringify([3, 7, 14, 30]),
+        coupons: JSON.stringify([
+          { code: "WELCOME10", discountPercent: 10, maxUses: 500 },
+          { code: "FLAT50", discountPaise: 5000, maxUses: 200 },
+        ]),
+      },
+    });
   }
 
   // ─── 4. Menu Items ───────────────────────────────────────────────────────────
@@ -370,11 +385,16 @@ async function main() {
         if (totalAmount < 5000) totalAmount = 5000;
         if (totalAmount > 120000) totalAmount = 120000;
 
+        const pointsEarned = status === "COMPLETED" ? Math.floor(totalAmount / 100) : 0;
+
         await db.order.create({
           data: {
             cafeId: cafe.id,
             customerId,
+            subtotalAmount: totalAmount,
+            discountAmount: 0,
             totalAmount,
+            pointsEarned,
             status,
             paymentMethod,
             createdAt: orderDate,

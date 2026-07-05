@@ -3,20 +3,20 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import * as customerRepo from "@/lib/repositories/customer";
+import { TIER_THRESHOLDS, nextTier, tierForPoints } from "@/lib/loyalty";
+import { referralCodeForCustomer } from "@/lib/repositories/referralCode";
 
-const TIER_THRESHOLDS: Record<string, number> = {
-  BRONZE: 0,
-  SILVER: 200,
-  GOLD: 500,
-  PLATINUM: 1000,
+const GUEST_RESPONSE = {
+  streakCount: 0,
+  points: 0,
+  tier: "BRONZE",
+  rewardsAvailable: 0,
+  progressPercent: 0,
+  pointsToNextTier: 200,
+  nextTier: "SILVER",
+  isGuest: true,
+  referralCode: null as string | null,
 };
-
-function nextTier(current: string): { tier: string; pointsNeeded: number } | null {
-  const order = ["BRONZE", "SILVER", "GOLD", "PLATINUM"];
-  const idx = order.indexOf(current);
-  if (idx < 0 || idx >= order.length - 1) return null;
-  return { tier: order[idx + 1], pointsNeeded: TIER_THRESHOLDS[order[idx + 1]] };
-}
 
 export async function GET(request: NextRequest) {
   const slug = request.nextUrl.searchParams.get("slug");
@@ -29,34 +29,18 @@ export async function GET(request: NextRequest) {
   const userId = (session?.user as { id?: string } | undefined)?.id;
 
   if (!userId) {
-    return NextResponse.json({
-      streakCount: 0,
-      points: 0,
-      tier: "BRONZE",
-      rewardsAvailable: 0,
-      progressPercent: 0,
-      pointsToNextTier: 200,
-      nextTier: "SILVER",
-      isGuest: true,
-    });
+    return NextResponse.json(GUEST_RESPONSE);
   }
 
   const customer = await customerRepo.getByUserId(cafe.id, userId);
   if (!customer) {
-    return NextResponse.json({
-      streakCount: 0,
-      points: 0,
-      tier: "BRONZE",
-      rewardsAvailable: 0,
-      progressPercent: 0,
-      pointsToNextTier: 200,
-      nextTier: "SILVER",
-      isGuest: true,
-    });
+    return NextResponse.json(GUEST_RESPONSE);
   }
 
-  const next = nextTier(customer.tier);
-  const currentThreshold = TIER_THRESHOLDS[customer.tier] ?? 0;
+  // Tier is derived from points so it can never drift out of sync.
+  const tier = tierForPoints(customer.points);
+  const next = nextTier(tier);
+  const currentThreshold = TIER_THRESHOLDS[tier] ?? 0;
   const nextThreshold = next ? TIER_THRESHOLDS[next.tier] : customer.points || 1;
   const span = Math.max(1, nextThreshold - currentThreshold);
   const progress = next
@@ -66,11 +50,12 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     streakCount: customer.streakCount,
     points: customer.points,
-    tier: customer.tier,
+    tier,
     rewardsAvailable: Math.floor(customer.points / 100),
     progressPercent: progress,
     pointsToNextTier: next ? Math.max(0, next.pointsNeeded - customer.points) : 0,
-    nextTier: next?.tier ?? customer.tier,
+    nextTier: next?.tier ?? tier,
     isGuest: false,
+    referralCode: referralCodeForCustomer(customer.id),
   });
 }

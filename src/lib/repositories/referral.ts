@@ -1,17 +1,19 @@
 import { db } from "../db";
-import { Referral } from "@prisma/client";
+import { Referral, Prisma } from "@prisma/client";
 
-export async function list(cafeId: string): Promise<Referral[]> {
+const withParties = Prisma.validator<Prisma.ReferralDefaultArgs>()({
+  include: {
+    referrer: { include: { user: true } },
+    referred: { include: { user: true } },
+  },
+});
+
+export type ReferralWithParties = Prisma.ReferralGetPayload<typeof withParties>;
+
+export async function list(cafeId: string): Promise<ReferralWithParties[]> {
   return db.referral.findMany({
     where: { cafeId },
-    include: {
-      referrer: {
-        include: { user: true },
-      },
-      referred: {
-        include: { user: true },
-      },
-    },
+    ...withParties,
     orderBy: { createdAt: "desc" },
   });
 }
