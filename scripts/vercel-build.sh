@@ -7,17 +7,17 @@ SCHEMA="prisma/schema.postgres.prisma"
 # Generate the Postgres Prisma client (no DB connection needed).
 prisma generate --schema "$SCHEMA"
 
-# If a database is configured, create the schema and seed demo data.
+# Create/sync the schema on the database (fast — DDL only).
 # Skipped on the very first deploy (before DATABASE_URL is set) so the
-# landing page still goes live.
+# landing page still goes live. Demo data is seeded separately
+# (npm run seed:postgres) — kept out of the build to keep deploys fast.
 if [ -n "$DATABASE_URL" ]; then
-  echo "DATABASE_URL detected — pushing schema and seeding…"
+  echo "DATABASE_URL detected — syncing schema…"
   # Neon's pooled connection can't run schema DDL — use the unpooled URL.
   PUSH_URL="${DATABASE_URL_UNPOOLED:-${POSTGRES_URL_NON_POOLING:-$DATABASE_URL}}"
   prisma db push --schema "$SCHEMA" --url "$PUSH_URL" --accept-data-loss
-  DATABASE_URL="$PUSH_URL" npx tsx prisma/seed.ts || echo "seed skipped (non-fatal)"
 else
-  echo "No DATABASE_URL set — skipping db push/seed."
+  echo "No DATABASE_URL set — skipping schema sync."
 fi
 
 next build
