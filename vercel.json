@@ -1,5 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "prisma db push --schema prisma/schema.postgres.prisma --skip-generate --accept-data-loss && prisma generate --schema prisma/schema.postgres.prisma && (npx tsx prisma/seed.ts || echo 'seed skipped') && next build",
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "buildCommand": "prisma generate --schema prisma/schema.postgres.prisma && (if [ -n \"$DATABASE_URL\" ]; then prisma db push --schema prisma/schema.postgres.prisma --skip-generate --accept-data-loss && (npx tsx prisma/seed.ts || echo 'seed skipped'); else echo 'No DATABASE_URL set — skipping db push/seed'; fi) && next build"
 }
