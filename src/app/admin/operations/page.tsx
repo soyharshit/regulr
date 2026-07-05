@@ -15,6 +15,13 @@ function OnboardingWizard() {
   const [ownerEmail, setOwnerEmail] = useState('');
   const [onboardStatus, setOnboardStatus] = useState<string | null>(null);
   const [onboarding, setOnboarding] = useState(false);
+  const [result, setResult] = useState<{
+    cafe: { name: string; slug: string };
+    storefrontPath: string;
+    qrPackPath: string;
+    owner: { email: string; tempPassword: string } | null;
+  } | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const onboard = async () => {
     if (!name || !slug) {
@@ -27,22 +34,15 @@ function OnboardingWizard() {
       const res = await fetch('/api/admin/onboard', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, slug, template, tablesCount }),
+        body: JSON.stringify({ name, slug, template, tablesCount, ownerEmail, city, address }),
       });
+      const data = await res.json().catch(() => ({ error: 'Onboarding failed' }));
       if (res.status === 401) {
         setOnboardStatus('Unauthorized — sign in as a superadmin to onboard cafes.');
       } else if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: 'Onboarding failed' }));
-        setOnboardStatus(err.error || 'Onboarding failed.');
+        setOnboardStatus(data.error || 'Onboarding failed.');
       } else {
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${slug}-qr-pack.pdf`;
-        a.click();
-        URL.revokeObjectURL(url);
-        setOnboardStatus(`Cafe "${name}" onboarded — QR pack downloaded.`);
+        setResult(data);
         setStep(6);
       }
     } catch {
@@ -50,6 +50,17 @@ function OnboardingWizard() {
     } finally {
       setOnboarding(false);
     }
+  };
+
+  const resetWizard = () => {
+    setStep(1);
+    setName('');
+    setSlug('');
+    setCity('');
+    setAddress('');
+    setOwnerEmail('');
+    setResult(null);
+    setOnboardStatus(null);
   };
 
   const steps = ['Basics', 'Location', 'Capacity', 'Menu', 'Review', 'Finish'];
@@ -139,21 +150,64 @@ function OnboardingWizard() {
               <p><span className="font-medium text-ink">Location:</span> {city || 'Not provided'}</p>
               <p><span className="font-medium text-ink">Tables:</span> {tablesCount}</p>
               <p><span className="font-medium text-ink">Template:</span> <span className="capitalize">{template}</span></p>
+              <p><span className="font-medium text-ink">Owner login:</span> {ownerEmail || 'none (no dashboard access)'}</p>
             </div>
             {onboardStatus && <p className="text-xs font-medium text-error mt-2">{onboardStatus}</p>}
           </div>
         )}
 
-        {step === 6 && (
-          <div className="flex flex-col items-center justify-center text-center space-y-3 h-full pt-4 animate-in zoom-in-95">
-            <div className="w-12 h-12 bg-success-soft text-success-heavy rounded-full flex items-center justify-center">
-              <CheckCircle2 size={24} />
+        {step === 6 && result && (
+          <div className="space-y-3 animate-in zoom-in-95">
+            <div className="flex flex-col items-center text-center space-y-1.5">
+              <div className="w-11 h-11 bg-success-soft text-success rounded-full flex items-center justify-center">
+                <CheckCircle2 size={22} />
+              </div>
+              <p className="text-sm font-bold text-ink">{result.cafe.name} is live!</p>
             </div>
-            <div>
-              <p className="text-sm font-bold text-ink">Onboarding Complete!</p>
-              <p className="text-xs text-ink-2 mt-1">QR pack has been downloaded.</p>
+
+            {result.owner ? (
+              <div className="rounded-control border border-border bg-bg-subtle p-3 space-y-2">
+                <p className="text-[11px] font-semibold text-ink uppercase tracking-wide">Owner login — share these once</p>
+                <div className="text-xs space-y-1 font-mono">
+                  <p><span className="text-ink-3">email:</span> {result.owner.email}</p>
+                  <p><span className="text-ink-3">password:</span> {result.owner.tempPassword}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard?.writeText(
+                      `Regulr login\nURL: ${window.location.origin}/auth/signin\nEmail: ${result.owner!.email}\nPassword: ${result.owner!.tempPassword}`
+                    );
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 1500);
+                  }}
+                  className="text-[11px] font-medium text-primary"
+                >
+                  {copied ? 'Copied!' : 'Copy credentials'}
+                </button>
+              </div>
+            ) : (
+              <p className="text-xs text-ink-3 text-center">No owner email given — add one later to grant dashboard access.</p>
+            )}
+
+            <div className="flex flex-col gap-2">
+              <a
+                href={result.qrPackPath}
+                className="flex items-center justify-center gap-2 px-4 py-2 bg-primary text-white rounded-control text-sm font-medium"
+              >
+                <FileDown size={16} /> Download table QR pack
+              </a>
+              <a
+                href={result.storefrontPath}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 px-4 py-2 border border-border text-ink rounded-control text-sm font-medium hover:bg-bg-subtle"
+              >
+                View storefront
+              </a>
             </div>
-            <button onClick={() => { setStep(1); setName(''); setSlug(''); }} className="mt-2 text-xs text-primary font-medium">
+
+            <button onClick={resetWizard} className="w-full text-center text-xs text-ink-2 font-medium pt-1">
               Onboard another cafe
             </button>
           </div>
@@ -172,7 +226,7 @@ function OnboardingWizard() {
           ) : (
             <button type="button" onClick={onboard} disabled={onboarding} className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-control text-sm font-medium disabled:opacity-50">
               <FileDown size={16} />
-              {onboarding ? 'Processing...' : 'Confirm & Download QR'}
+              {onboarding ? 'Creating…' : 'Create cafe & account'}
             </button>
           )}
         </div>

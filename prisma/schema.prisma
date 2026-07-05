@@ -22,6 +22,7 @@ model Cafe {
   customers   Customer[]
   referrals   Referral[]
   settings    CafeSettings?
+  staff       User[]        @relation("CafeStaff")
 }
 
 model CafeSettings {
@@ -43,9 +44,11 @@ model User {
   password      String?    // optional, for credential-based logins (e.g., owner/admin accounts)
   name          String?
   role          String     @default("CUSTOMER") // SUPERADMIN, OWNER, STAFF, CUSTOMER
+  cafeId        String?    // the cafe an OWNER/STAFF user belongs to (null for SUPERADMIN/CUSTOMER)
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
   customers     Customer[]
+  cafe          Cafe?      @relation("CafeStaff", fields: [cafeId], references: [id], onDelete: SetNull)
 }
 
 model Customer {

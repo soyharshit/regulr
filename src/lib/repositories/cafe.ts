@@ -13,41 +13,53 @@ export async function list(): Promise<Cafe[]> {
   return db.cafe.findMany({ orderBy: { createdAt: "desc" } });
 }
 
+// Original demo owners predate the User.cafeId link — map them by email domain.
+const LEGACY_OWNER_DOMAIN_TO_SLUG: Record<string, string> = {
+  "brewhaven.com": "brew-haven",
+  "chaipoint.com": "chai-point",
+  "espressolab.com": "espresso-lab",
+};
+
 export async function resolveCafeForSession(session: any, requestSlug?: string | null): Promise<Cafe | null> {
   const user = session?.user as { id?: string; email?: string; role?: string } | undefined;
-  let cafe: Cafe | null = null;
 
+  // Owners/staff are strictly scoped to their own cafe — never fall through to
+  // another cafe, to avoid cross-tenant data exposure.
+  if (user?.role === "OWNER" || user?.role === "STAFF") {
+    if (user.id) {
+      const dbUser = await db.user.findUnique({ where: { id: user.id } });
+      if (dbUser?.cafeId) {
+        return db.cafe.findUnique({ where: { id: dbUser.cafeId } });
+      }
+    }
+    if (user.email) {
+      const slug = LEGACY_OWNER_DOMAIN_TO_SLUG[user.email.split("@")[1]];
+      if (slug) return db.cafe.findUnique({ where: { slug } });
+    }
+    return null;
+  }
+
+  // Superadmin can act on any cafe: the cafe they're impersonating, else the
+  // explicitly requested slug, else the first cafe.
   if (user?.role === "SUPERADMIN") {
-    // Look up last impersonation
     const lastImpersonate = await db.auditLog.findFirst({
       where: { actorId: user.id || "unknown" },
       orderBy: { createdAt: "desc" },
     });
-    if (lastImpersonate && lastImpersonate.action === "IMPERSONATE_START" && lastImpersonate.targetId) {
-      cafe = await db.cafe.findUnique({ where: { id: lastImpersonate.targetId } });
+    if (lastImpersonate?.action === "IMPERSONATE_START" && lastImpersonate.targetId) {
+      const impersonated = await db.cafe.findUnique({ where: { id: lastImpersonate.targetId } });
+      if (impersonated) return impersonated;
     }
-  } else if (user?.role === "OWNER" && user.email) {
-    // Map email domain to slug
-    const emailDomain = user.email.split('@')[1];
-    const domainToSlug: Record<string, string> = {
-      "brewhaven.com": "brew-haven",
-      "chaipoint.com": "chai-point",
-      "espressolab.com": "espresso-lab",
-    };
-    const slug = domainToSlug[emailDomain];
-    if (slug) {
-      cafe = await db.cafe.findUnique({ where: { slug } });
+    if (requestSlug) {
+      const bySlug = await db.cafe.findUnique({ where: { slug: requestSlug } });
+      if (bySlug) return bySlug;
     }
+    return db.cafe.findFirst();
   }
 
-  // Fallback to slug parameter or first cafe
-  if (!cafe && requestSlug) {
-    cafe = await db.cafe.findUnique({ where: { slug: requestSlug } });
+  // Public/unauthenticated callers only get what they explicitly ask for.
+  if (requestSlug) {
+    return db.cafe.findUnique({ where: { slug: requestSlug } });
   }
-
-  if (!cafe) {
-    cafe = await db.cafe.findFirst();
-  }
-
-  return cafe;
+  return null;
 }

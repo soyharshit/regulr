@@ -230,6 +230,17 @@ async function main() {
     });
   }
 
+  // ─── 3b. Link demo owners to their cafes ────────────────────────────────────
+  for (const ownerDef of ownerEmails) {
+    const cafe = cafeRecords[ownerDef.cafeSlug];
+    if (cafe) {
+      await db.user.update({
+        where: { email: ownerDef.email },
+        data: { cafeId: cafe.id },
+      });
+    }
+  }
+
   // ─── 4. Menu Items ───────────────────────────────────────────────────────────
   const menuItemMap: Record<string, { id: string; price: number; name: string }[]> = {};
   for (let i = 0; i < CAFES.length; i++) {

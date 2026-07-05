@@ -18,3 +18,32 @@ export async function create(data: Prisma.UserCreateInput): Promise<User> {
     data,
   });
 }
+
+/**
+ * Create or promote a cafe owner account. If the email already exists the user
+ * is promoted to OWNER of this cafe (and optionally given a fresh password);
+ * otherwise a new OWNER user is created.
+ */
+export async function upsertOwner(params: {
+  email: string;
+  name?: string | null;
+  hashedPassword: string;
+  cafeId: string;
+}): Promise<User> {
+  return db.user.upsert({
+    where: { email: params.email },
+    update: {
+      role: "OWNER",
+      cafeId: params.cafeId,
+      name: params.name ?? undefined,
+      password: params.hashedPassword,
+    },
+    create: {
+      email: params.email,
+      name: params.name ?? null,
+      role: "OWNER",
+      cafeId: params.cafeId,
+      password: params.hashedPassword,
+    },
+  });
+}
