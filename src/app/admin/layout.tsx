@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { signOut } from 'next-auth/react';
 import {
   BarChart3,
   Store,
@@ -12,6 +13,7 @@ import {
   ChevronLeft,
   Menu,
   X,
+  LogOut,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -140,14 +142,36 @@ export default function AdminLayout({
 
         {/* Sidebar footer */}
         <div className={`border-t border-border p-3 flex-shrink-0 ${collapsed ? 'lg:px-2' : ''}`}>
-          <div className={`flex items-center gap-2.5 ${collapsed ? 'lg:justify-center' : ''}`}>
-            <div className="w-8 h-8 rounded-full bg-[#6C5CE7] flex items-center justify-center flex-shrink-0">
-              <span className="text-white text-xs font-semibold">SA</span>
+          <div className={`flex items-center justify-between ${collapsed ? 'lg:justify-center' : ''}`}>
+            <div className={`flex items-center gap-2.5 ${collapsed ? 'lg:justify-center' : ''}`}>
+              <div className="w-8 h-8 rounded-full bg-[#6C5CE7] flex items-center justify-center flex-shrink-0">
+                <span className="text-white text-xs font-semibold">SA</span>
+              </div>
+              <div className={`min-w-0 ${collapsed ? 'lg:hidden' : ''}`}>
+                <p className="text-sm font-medium text-ink truncate">Super Admin</p>
+                <p className="text-xs text-ink-3 truncate">superadmin@regulr.in</p>
+              </div>
             </div>
-            <div className={`min-w-0 ${collapsed ? 'lg:hidden' : ''}`}>
-              <p className="text-sm font-medium text-ink truncate">Super Admin</p>
-              <p className="text-xs text-ink-3 truncate">admin@regulr.in</p>
-            </div>
+            
+            {!collapsed && (
+              <button
+                onClick={() => signOut({ callbackUrl: '/' })}
+                className="p-2 rounded-control text-ink-2 hover:bg-error-soft hover:text-error transition-colors"
+                title="Sign Out"
+              >
+                <LogOut size={16} />
+              </button>
+            )}
+            
+            {collapsed && (
+              <button
+                onClick={() => signOut({ callbackUrl: '/' })}
+                className="hidden lg:flex w-8 h-8 mt-2 mx-auto items-center justify-center rounded-control text-ink-2 hover:bg-error-soft hover:text-error transition-colors"
+                title="Sign Out"
+              >
+                <LogOut size={16} />
+              </button>
+            )}
           </div>
         </div>
       </aside>

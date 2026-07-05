@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterAll } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import { db } from "@/lib/db";
 import * as menuItemRepo from "@/lib/repositories/menuItem";
 import * as orderRepo from "@/lib/repositories/order";
@@ -47,10 +47,6 @@ describe("Tenant Isolation Repository Tests", () => {
     customerC = await customerRepo.create(cafeAId, {
       user: { connect: { id: userC.id } }
     });
-  });
-
-  afterAll(async () => {
-    await db.$disconnect();
   });
 
   describe("MenuItem Repository", () => {

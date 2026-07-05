@@ -12,7 +12,7 @@ export default function GrowthSettingsPage() {
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    fetch('/api/growth?slug=brew-haven')
+    fetch('/api/growth')
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         // Only accept a well-formed settings payload; keep defaults otherwise

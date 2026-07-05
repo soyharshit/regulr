@@ -3,18 +3,19 @@ import * as orderRepo from "@/lib/repositories/order";
 import * as customerRepo from "@/lib/repositories/customer";
 
 export async function POST(
-  request: NextRequest,
-  { params }: { params: { orderId: string } }
+  _request: NextRequest,
+  { params }: { params: Promise<{ orderId: string }> }
 ) {
+  const { orderId } = await params;
   try {
-    const body = await request.json();
+    const body = await _request.json();
     const { cafeId, points = 25 } = body;
 
     if (!cafeId) {
       return NextResponse.json({ error: "cafeId required" }, { status: 400 });
     }
 
-    const order = await orderRepo.getById(cafeId, params.orderId);
+    const order = await orderRepo.getById(cafeId, orderId);
     if (!order) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }

@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Store,
   IndianRupee,
@@ -40,69 +41,9 @@ function formatNum(n: number): string {
 type CafeStatus = 'trial' | 'active' | 'past-due' | 'suspended';
 type HealthColor = 'green' | 'amber' | 'red';
 
-interface Cafe {
-  name: string;
-  slug: string;
-  city: string;
-  plan: string;
-  mrr: number;
-  lastActivity: string;
-  orders7d: number;
-  status: CafeStatus;
-}
 
-const CAFES: Cafe[] = [
-  {
-    name: "Haku's Coffeehouse",
-    slug: 'demo',
-    city: 'Bengaluru',
-    plan: 'Growth',
-    mrr: 5000,
-    lastActivity: '2 hours ago',
-    orders7d: 48,
-    status: 'active',
-  },
-  {
-    name: 'The Brew Room',
-    slug: 'brewroom',
-    city: 'Mumbai',
-    plan: 'Pro',
-    mrr: 3500,
-    lastActivity: '5 hours ago',
-    orders7d: 23,
-    status: 'active',
-  },
-  {
-    name: 'Cafe Latte',
-    slug: 'cafelatte',
-    city: 'Pune',
-    plan: 'Starter',
-    mrr: 1500,
-    lastActivity: '1 day ago',
-    orders7d: 7,
-    status: 'past-due',
-  },
-  {
-    name: 'Morning Mist',
-    slug: 'morningmist',
-    city: 'Hyderabad',
-    plan: 'Growth',
-    mrr: 5000,
-    lastActivity: '3 days ago',
-    orders7d: 0,
-    status: 'trial',
-  },
-  {
-    name: 'Bean & Leaf',
-    slug: 'beanleaf',
-    city: 'Jaipur',
-    plan: 'Pro',
-    mrr: 4000,
-    lastActivity: '12 hours ago',
-    orders7d: 15,
-    status: 'active',
-  },
-];
+
+
 
 const STATUS_FILTERS: { label: string; value: CafeStatus | 'all'; count: number }[] = [
   { label: 'All', value: 'all', count: 47 },
@@ -278,10 +219,44 @@ function StatusBadge({ status }: { status: CafeStatus }) {
 /* ------------------------------------------------------------------ */
 
 export default function AdminDashboard() {
+  const router = useRouter();
   const [activeFilter, setActiveFilter] = useState<CafeStatus | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  const filteredCafes = CAFES.filter((cafe) => {
+  useEffect(() => {
+    fetch('/api/admin/summary')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        setData(d);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
+  const impersonate = async (slug: string) => {
+    const res = await fetch('/api/admin/impersonate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ targetSlug: slug }),
+    });
+    if (res.ok) {
+      router.push('/dashboard');
+    }
+  };
+
+  const statsList = data?.stats ? [
+    { label: 'Total Cafes', value: data.stats.totalCafes.toString(), icon: Store, trend: null, iconColor: '#6C5CE7', iconBg: '#F0EEFF' },
+    { label: 'Active Cafes', value: data.stats.activeCafes.toString(), icon: Store, trend: null, iconColor: '#00C875', iconBg: '#E6F9F0' },
+    { label: 'MRR', value: formatINR(data.stats.mrr), icon: IndianRupee, trend: null, iconColor: '#6C5CE7', iconBg: '#F0EEFF' },
+    { label: 'Churn (30d)', value: `${data.stats.churn30d}%`, icon: Percent, trend: null, iconColor: '#E2445C', iconBg: '#FDE8EB' },
+    { label: 'GMV (30d)', value: formatINR(data.stats.gmv30d), icon: ShoppingBag, trend: null, iconColor: '#00C4A7', iconBg: '#E6FAF6' },
+    { label: 'Game Engagement', value: `${data.stats.gameEngagement}%`, icon: Gamepad2, trend: null, iconColor: '#FFB020', iconBg: '#FFF8E6' },
+  ] : STATS;
+
+  const cafesList = data?.cafes || [];
+  const filteredCafes = cafesList.filter((cafe: any) => {
     const matchesFilter = activeFilter === 'all' || cafe.status === activeFilter;
     const matchesSearch =
       searchQuery === '' ||
@@ -290,6 +265,14 @@ export default function AdminDashboard() {
       cafe.city.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesFilter && matchesSearch;
   });
+
+  const statusFilters = data?.cafes ? [
+    { label: 'All', value: 'all' as const, count: data.cafes.length },
+    { label: 'Trial', value: 'trial' as const, count: data.cafes.filter((c: any) => c.status === 'trial').length },
+    { label: 'Active', value: 'active' as const, count: data.cafes.filter((c: any) => c.status === 'active').length },
+    { label: 'Past Due', value: 'past-due' as const, count: data.cafes.filter((c: any) => c.status === 'past-due').length },
+    { label: 'Suspended', value: 'suspended' as const, count: data.cafes.filter((c: any) => c.status === 'suspended').length },
+  ] : STATUS_FILTERS;
 
   return (
     <div className="min-h-screen">
@@ -332,11 +315,13 @@ export default function AdminDashboard() {
         </div>
 
         {/* Stat Cards Grid */}
+        {loading ? <div className="animate-pulse h-28 bg-white border border-border rounded-card w-full" /> :
         <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 lg:gap-4">
-          {STATS.map((stat) => (
+          {statsList.map((stat: any) => (
             <StatCard key={stat.label} stat={stat} />
           ))}
         </div>
+        }
 
         {/* Cafes Section */}
         <div className="bg-white rounded-card shadow-card overflow-hidden">
@@ -348,7 +333,7 @@ export default function AdminDashboard() {
                   Cafes
                 </h3>
                 <p className="text-xs text-ink-3 mt-0.5">
-                  {formatNum(47)} cafes on the platform
+                  {formatNum(cafesList.length)} cafes on the platform
                 </p>
               </div>
               {/* Search */}
@@ -369,7 +354,7 @@ export default function AdminDashboard() {
 
             {/* Status filter chips */}
             <div className="flex flex-wrap gap-2 mt-4">
-              {STATUS_FILTERS.map((filter) => (
+              {statusFilters.map((filter) => (
                 <button
                   key={filter.value}
                   onClick={() => setActiveFilter(filter.value)}
@@ -430,7 +415,24 @@ export default function AdminDashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {filteredCafes.map((cafe) => (
+                {loading && (
+                  <tr>
+                    <td colSpan={8} className="px-5 py-8 text-center text-sm text-ink-3">
+                      Loading cafes…
+                    </td>
+                  </tr>
+                )}
+                {!loading && filteredCafes.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={8}
+                      className="px-5 py-12 text-center text-sm text-ink-3"
+                    >
+                      No cafes match your filters
+                    </td>
+                  </tr>
+                )}
+                {!loading && filteredCafes.map((cafe: any) => (
                   <tr
                     key={cafe.slug}
                     className="group hover:bg-bg-subtle/60 transition-colors duration-100"
@@ -487,11 +489,11 @@ export default function AdminDashboard() {
                     {/* Actions */}
                     <td className="px-5 py-3.5 text-right">
                       <div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                        <button className="inline-flex items-center gap-1 h-8 px-3 rounded-control text-xs font-medium text-ink-2 bg-bg-subtle hover:bg-bg-hover border border-border transition-colors duration-150">
+                        <a href={`/store/${cafe.slug}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 h-8 px-3 rounded-control text-xs font-medium text-ink-2 bg-bg-subtle hover:bg-bg-hover border border-border transition-colors duration-150">
                           <Eye size={13} />
                           View
-                        </button>
-                        <button className="inline-flex items-center gap-1 h-8 px-3 rounded-control text-xs font-medium text-white bg-[#6C5CE7] hover:bg-[#5A4BD1] transition-colors duration-150">
+                        </a>
+                        <button onClick={() => impersonate(cafe.slug)} className="inline-flex items-center gap-1 h-8 px-3 rounded-control text-xs font-medium text-white bg-[#6C5CE7] hover:bg-[#5A4BD1] transition-colors duration-150">
                           <UserCog size={13} />
                           Impersonate
                         </button>
@@ -499,23 +501,23 @@ export default function AdminDashboard() {
                     </td>
                   </tr>
                 ))}
-                {filteredCafes.length === 0 && (
-                  <tr>
-                    <td
-                      colSpan={8}
-                      className="px-5 py-12 text-center text-sm text-ink-3"
-                    >
-                      No cafes match your filters
-                    </td>
-                  </tr>
-                )}
               </tbody>
             </table>
           </div>
 
           {/* Mobile cards */}
           <div className="md:hidden divide-y divide-border">
-            {filteredCafes.map((cafe) => (
+            {loading && (
+              <div className="p-4 text-center text-sm text-ink-3">
+                Loading cafes…
+              </div>
+            )}
+            {!loading && filteredCafes.length === 0 && (
+              <div className="px-4 py-12 text-center text-sm text-ink-3">
+                No cafes match your filters
+              </div>
+            )}
+            {!loading && filteredCafes.map((cafe: any) => (
               <div key={cafe.slug} className="p-4 space-y-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
@@ -563,21 +565,16 @@ export default function AdminDashboard() {
                     <span className="text-xs text-ink-3">{cafe.plan}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <button className="inline-flex items-center justify-center w-9 h-9 rounded-control bg-bg-subtle hover:bg-bg-hover border border-border transition-colors">
+                    <a href={`/store/${cafe.slug}`} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center w-9 h-9 rounded-control bg-bg-subtle hover:bg-bg-hover border border-border transition-colors">
                       <Eye size={15} className="text-ink-2" />
-                    </button>
-                    <button className="inline-flex items-center justify-center w-9 h-9 rounded-control bg-[#6C5CE7] hover:bg-[#5A4BD1] transition-colors">
+                    </a>
+                    <button onClick={() => impersonate(cafe.slug)} className="inline-flex items-center justify-center w-9 h-9 rounded-control bg-[#6C5CE7] hover:bg-[#5A4BD1] transition-colors">
                       <UserCog size={15} className="text-white" />
                     </button>
                   </div>
                 </div>
               </div>
             ))}
-            {filteredCafes.length === 0 && (
-              <div className="px-4 py-12 text-center text-sm text-ink-3">
-                No cafes match your filters
-              </div>
-            )}
           </div>
         </div>
       </div>

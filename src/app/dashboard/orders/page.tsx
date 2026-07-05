@@ -46,8 +46,11 @@ export default function OrdersKanbanPage() {
   const knownIds = useRef(new Set<string>());
 
   const loadOrders = useCallback(async () => {
-    const res = await fetch('/api/dashboard/summary?slug=brew-haven&range=today');
-    if (!res.ok) return;
+    const res = await fetch('/api/dashboard/summary?range=today');
+    if (!res.ok) {
+      setLoading(false);
+      return;
+    }
     const data = await res.json();
     setCafeId(data.cafe.id);
 

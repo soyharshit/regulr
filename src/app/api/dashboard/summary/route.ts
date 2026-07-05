@@ -19,12 +19,18 @@ function timeAgo(date: Date) {
   return `${Math.floor(hours / 24)}d ago`;
 }
 
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+
+import { resolveCafeForSession } from "@/lib/repositories/cafe";
+
 export async function GET(request: NextRequest) {
-  const slug = request.nextUrl.searchParams.get("slug") || "brew-haven";
+  const session = await getServerSession(authOptions);
+  const slug = request.nextUrl.searchParams.get("slug");
+  const cafe = await resolveCafeForSession(session, slug);
+
   const range = request.nextUrl.searchParams.get("range") || "today";
   const startDate = startDateForRange(range);
-
-  const cafe = await db.cafe.findUnique({ where: { slug } });
   if (!cafe) {
     return NextResponse.json({ error: "Cafe not found" }, { status: 404 });
   }
@@ -87,8 +93,11 @@ export async function GET(request: NextRequest) {
     revenue: amount / 100,
   }));
 
+  const isImpersonating = session?.user && (session.user as { role?: string }).role === "SUPERADMIN";
+
   return NextResponse.json({
     cafe,
+    isImpersonating,
     stats: {
       orders: orders.length,
       revenue,

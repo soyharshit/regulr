@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+
 
 const DEFAULT_SETTINGS = {
   loyaltyEnabled: true,
@@ -8,9 +8,16 @@ const DEFAULT_SETTINGS = {
   coupons: [{ code: "WELCOME10", discountPaise: 1000, maxUses: 100 }],
 };
 
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+
+import { resolveCafeForSession } from "@/lib/repositories/cafe";
+
 export async function GET(request: NextRequest) {
-  const slug = request.nextUrl.searchParams.get("slug") || "brew-haven";
-  const cafe = await db.cafe.findUnique({ where: { slug } });
+  const session = await getServerSession(authOptions);
+  const slug = request.nextUrl.searchParams.get("slug");
+  const cafe = await resolveCafeForSession(session, slug);
+
   if (!cafe) return NextResponse.json({ error: "Cafe not found" }, { status: 404 });
   return NextResponse.json({ cafeId: cafe.id, ...DEFAULT_SETTINGS });
 }

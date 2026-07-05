@@ -21,6 +21,12 @@ export async function create(
   referrerId: string,
   referredId: string
 ): Promise<Referral> {
+  const referrer = await db.customer.findFirst({ where: { id: referrerId, cafeId } });
+  const referred = await db.customer.findFirst({ where: { id: referredId, cafeId } });
+  
+  if (!referrer || !referred) {
+    throw new Error("Referrer or referred not found or unauthorized for this cafe");
+  }
   return db.referral.create({
     data: {
       cafe: { connect: { id: cafeId } },

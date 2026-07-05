@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { StoreSkeleton } from "@/components/store/StoreSkeleton";
 import { OrderTracker } from "@/components/store/OrderTracker";
 import { RewardScreen } from "@/components/store/RewardScreen";
@@ -59,9 +59,9 @@ interface MenuItem extends ApiMenuItem {
 }
 
 interface PageProps {
-  params: {
+  params: Promise<{
     slug: string;
-  };
+  }>;
 }
 
 function VegMark({ isVeg }: { isVeg: boolean }) {
@@ -488,6 +488,7 @@ function EmptyState({ message }: { message: string }) {
 }
 
 export default function StorefrontPage({ params }: PageProps) {
+  const { slug } = React.use(params);
   const [cafe, setCafe] = useState<Cafe | null>(null);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [activeCategory, setActiveCategory] = useState<string>("");
@@ -511,8 +512,8 @@ export default function StorefrontPage({ params }: PageProps) {
 
       try {
         const [cafeResponse, menuResponse] = await Promise.all([
-          fetch(`/api/cafe?slug=${encodeURIComponent(params.slug)}`),
-          fetch(`/api/menu?slug=${encodeURIComponent(params.slug)}`),
+          fetch(`/api/cafe?slug=${encodeURIComponent(slug)}`),
+          fetch(`/api/menu?slug=${encodeURIComponent(slug)}`),
         ]);
 
         if (!cafeResponse.ok) {
@@ -552,7 +553,7 @@ export default function StorefrontPage({ params }: PageProps) {
     return () => {
       isMounted = false;
     };
-  }, [params.slug]);
+  }, [slug]);
 
   const categories = useMemo(
     () => Array.from(new Set(menuItems.map((item) => item.categoryLabel))),
@@ -692,7 +693,7 @@ export default function StorefrontPage({ params }: PageProps) {
 
   return (
     <>
-      <LoyaltyStrip slug={params.slug} />
+      <LoyaltyStrip slug={slug} />
       <FlashOfferBanner />
 
       {confirmedOrderId && (

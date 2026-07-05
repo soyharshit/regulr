@@ -1,5 +1,5 @@
 import { db } from "../db";
-import { Order, Prisma } from "@prisma/client";
+import { Order } from "@prisma/client";
 
 export async function list(cafeId: string): Promise<Order[]> {
   return db.order.findMany({
@@ -47,8 +47,27 @@ export async function getByIdPublic(id: string): Promise<Order | null> {
 
 export async function create(
   cafeId: string,
-  data: Omit<Prisma.OrderCreateInput, "cafe">
+  data: any
 ): Promise<Order> {
+  if (data.customer?.connect?.id) {
+    const cust = await db.customer.findFirst({
+      where: { id: data.customer.connect.id, cafeId }
+    });
+    if (!cust) throw new Error("Customer not found or unauthorized for this cafe");
+  }
+
+  if (data.orderItems?.create) {
+    const items = Array.isArray(data.orderItems.create) ? data.orderItems.create : [data.orderItems.create];
+    for (const item of items) {
+      if (item.menuItem?.connect?.id) {
+        const m = await db.menuItem.findFirst({
+          where: { id: item.menuItem.connect.id, cafeId }
+        });
+        if (!m) throw new Error("MenuItem not found or unauthorized for this cafe");
+      }
+    }
+  }
+
   return db.order.create({
     data: {
       ...data,

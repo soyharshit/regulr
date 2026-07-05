@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { signOut } from 'next-auth/react';
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -153,6 +154,7 @@ export default function DashboardLayout({
 
           {/* Logout */}
           <button
+            onClick={() => signOut({ callbackUrl: '/' })}
             className={`flex w-full items-center gap-3 px-3 py-2.5 rounded-control text-ink-2 hover:bg-error-soft hover:text-error transition-colors text-sm ${
               collapsed ? 'justify-center' : ''
             }`}

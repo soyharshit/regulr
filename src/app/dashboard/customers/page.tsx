@@ -19,11 +19,11 @@ export default function CustomersPage() {
   const [adjustPoints, setAdjustPoints] = useState('');
 
   useEffect(() => {
-    fetch('/api/dashboard/summary?slug=brew-haven')
+    fetch('/api/dashboard/summary')
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (d?.cafe?.id) setCafeId(d.cafe.id);
-        return fetch('/api/customers?slug=brew-haven');
+        return fetch('/api/customers');
       })
       .then((r) => (r.ok ? r.json() : []))
       .then((d) => setCustomers(Array.isArray(d) ? d : []))
@@ -43,7 +43,7 @@ export default function CustomersPage() {
       body: JSON.stringify({ cafeId, customerId, points: Number(adjustPoints) }),
     });
     setAdjustId(null);
-    const res = await fetch('/api/customers?slug=brew-haven');
+    const res = await fetch('/api/customers');
     setCustomers(await res.json());
   };
 
@@ -55,7 +55,7 @@ export default function CustomersPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ cafeId, customerId, points: customer.points + 50 }),
     });
-    const res = await fetch('/api/customers?slug=brew-haven');
+    const res = await fetch('/api/customers');
     setCustomers(await res.json());
   };
 

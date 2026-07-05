@@ -18,7 +18,7 @@ export default function MenuManagementPage() {
   const [form, setForm] = useState({ name: '', price: '', category: 'beverages' });
 
   const load = useCallback(async () => {
-    const summary = await fetch('/api/dashboard/summary?slug=brew-haven');
+    const summary = await fetch('/api/dashboard/summary');
     if (!summary.ok) return;
     const { cafe } = await summary.json();
     if (!cafe?.id) return;

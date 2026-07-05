@@ -15,7 +15,6 @@ export default defineConfig({
     },
     environment: 'node',
     globals: true,
-    setupFiles: ['./tests/unit/setup.ts'],
     include: ['tests/unit/**/*.test.ts'],
     poolOptions: {
       threads: {

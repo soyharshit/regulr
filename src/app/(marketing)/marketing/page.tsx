@@ -289,10 +289,10 @@ export default function MarketingPage() {
             </span>
           </div>
           <a
-            href="#get-started"
+            href="/auth/signin"
             className="press-scale inline-flex h-10 items-center gap-1.5 rounded-pill bg-ink px-5 text-sm font-semibold text-white transition-all duration-150 hover:bg-ink/90 hover:shadow-pop"
           >
-            Get Started
+            Login
             <ArrowRight className="h-3.5 w-3.5" />
           </a>
         </div>
@@ -335,7 +335,7 @@ export default function MarketingPage() {
               {/* CTA */}
               <div className="reveal reveal-delay-3 mt-8 flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
                 <a
-                  href="#get-started"
+                  href="/auth/signin"
                   className="press-scale inline-flex h-14 items-center justify-center gap-2 rounded-pill gradient-coral px-8 text-base font-bold text-white shadow-glow transition-all duration-150 hover:shadow-[0_0_32px_rgba(255,107,74,0.35)] hover:brightness-105"
                 >
                   Get Regulr for your cafe
@@ -531,24 +531,15 @@ export default function MarketingPage() {
             customer bases with Regulr.
           </p>
 
-          {/* Email form */}
-          <form
-            onSubmit={(e) => e.preventDefault()}
-            className="mt-8 flex flex-col sm:flex-row gap-3 max-w-md mx-auto"
-          >
-            <input
-              type="email"
-              placeholder="your@cafe.com"
-              required
-              className="flex-1 h-14 rounded-pill border-2 border-border bg-white px-6 text-base text-ink placeholder:text-ink-2/50 transition-all duration-150 focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10"
-            />
-            <button
-              type="submit"
-              className="press-scale h-14 rounded-pill gradient-coral px-7 text-base font-bold text-white shadow-glow transition-all duration-150 hover:shadow-[0_0_32px_rgba(255,107,74,0.35)] hover:brightness-105 whitespace-nowrap"
+          {/* Login CTA */}
+          <div className="mt-8 flex justify-center">
+            <a
+              href="/auth/signin"
+              className="press-scale inline-flex h-14 items-center justify-center gap-2 rounded-pill gradient-coral px-8 text-base font-bold text-white shadow-glow transition-all duration-150 hover:shadow-[0_0_32px_rgba(255,107,74,0.35)] hover:brightness-105 whitespace-nowrap"
             >
               Get Started Free
-            </button>
-          </form>
+            </a>
+          </div>
 
           <p className="mt-4 text-sm text-ink-2/60">
             Free for your first 100 orders. No credit card required.

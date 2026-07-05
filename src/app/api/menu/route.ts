@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as menuItemRepo from '@/lib/repositories/menuItem';
-import { db } from '@/lib/db';
+import * as cafeRepo from '@/lib/repositories/cafe';
 
 export async function GET(request: NextRequest) {
   const cafeId = request.nextUrl.searchParams.get('cafeId');
@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
   let resolvedCafeId = cafeId;
 
   if (!resolvedCafeId && slug) {
-    const cafe = await db.cafe.findUnique({ where: { slug } });
+    const cafe = await cafeRepo.getBySlug(slug);
     if (!cafe) {
       return NextResponse.json({ error: 'Cafe not found' }, { status: 404 });
     }

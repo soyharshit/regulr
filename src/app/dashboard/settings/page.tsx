@@ -15,10 +15,10 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/cafe?slug=brew-haven')
+    fetch('/api/dashboard/summary')
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
-        setCafe(d);
+        setCafe(d?.cafe || null);
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -88,7 +88,9 @@ export default function SettingsPage() {
               Customers order directly at your branded page:
             </p>
             <a
-              href={`/store/${cafe.slug}`}
+              href={process.env.NODE_ENV === 'development' ? `http://${cafe.slug}.localhost:3000` : `https://${cafe.slug}.regulr.in`}
+              target="_blank"
+              rel="noopener noreferrer"
               className="inline-block px-3 py-2 rounded-control bg-bg-subtle border border-border text-sm font-mono text-primary hover:bg-bg-hover transition-colors"
             >
               {cafe.slug}.regulr.in

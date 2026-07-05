@@ -1,22 +1,22 @@
 import type { Metadata } from "next";
-import { db } from "@/lib/db";
+import * as cafeRepo from "@/lib/repositories/cafe";
 
 interface StoreLayoutProps {
   children: React.ReactNode;
-  params: {
+  params: Promise<{
     slug: string;
-  };
+  }>;
 }
 
 interface StoreMetadataProps {
-  params: {
+  params: Promise<{
     slug: string;
-  };
+  }>;
 }
 
 async function getCafe(slug: string) {
   try {
-    return await db.cafe.findUnique({ where: { slug } });
+    return await cafeRepo.getBySlug(slug);
   } catch {
     return null;
   }
@@ -32,7 +32,8 @@ function getInitials(name: string): string {
 }
 
 export async function generateMetadata({ params }: StoreMetadataProps): Promise<Metadata> {
-  const cafe = await getCafe(params.slug);
+  const { slug } = await params;
+  const cafe = await getCafe(slug);
   const cafeName = cafe?.name || "Regulr Cafe";
 
   return {
@@ -46,7 +47,8 @@ export async function generateMetadata({ params }: StoreMetadataProps): Promise<
 }
 
 export default async function StoreLayout({ children, params }: StoreLayoutProps) {
-  const cafe = await getCafe(params.slug);
+  const { slug } = await params;
+  const cafe = await getCafe(slug);
   const cafeName = cafe?.name || "Regulr Cafe";
   const initials = getInitials(cafeName) || "RC";
 

@@ -23,7 +23,11 @@ export default function SignInPage() {
       setError('Invalid email or password');
       setLoading(false);
     } else {
-      router.push('/dashboard');
+      if (email === 'superadmin@regulr.in') {
+        router.push('/admin');
+      } else {
+        router.push('/dashboard');
+      }
     }
   };
 

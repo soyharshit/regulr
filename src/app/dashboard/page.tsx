@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   TrendingUp,
   ShoppingBag,
@@ -237,11 +238,51 @@ function TopItemsChart() {
 /* ──────────────────────────── page ──────────────────────────── */
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [range, setRange] = useState<RangeKey>('today');
-  const stats = STATS[range];
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  const stopImpersonating = async () => {
+    const res = await fetch('/api/admin/impersonate', { method: 'DELETE' });
+    if (res.ok) {
+      router.push('/admin');
+    }
+  };
+
+  useEffect(() => {
+    setLoading(true);
+    fetch(`/api/dashboard/summary?range=${range}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        setData(d);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, [range]);
+
+  const statsList = data?.stats ? [
+    { id: 'orders', icon: ShoppingBag, label: 'Direct Orders', value: data.stats.orders.toString(), delta: null },
+    { id: 'revenue', icon: BadgeIndianRupee, label: 'Direct Revenue', value: formatINR(data.stats.revenue), delta: null },
+    { id: 'commission', icon: PiggyBank, label: 'Commission Saved', value: formatINR(data.stats.commissionSaved), delta: null, hero: true, subtitle: 'vs 25% marketplace rate' },
+    { id: 'repeat', icon: Repeat2, label: 'Repeat Rate', value: `${data.stats.repeatRate}%`, delta: null },
+    { id: 'streaks', icon: Flame, label: 'Active Streaks', value: data.stats.activeStreaks.toString(), delta: null },
+    { id: 'new', icon: UserPlus, label: 'New Customers', value: data.stats.newCustomers.toString(), delta: null },
+  ] : STATS[range];
+
+  const recentOrders = data?.recentOrders || RECENT_ORDERS;
+  const cafeName = data?.cafe?.name || "Haku's Coffeehouse";
 
   return (
     <div className="min-h-full">
+      {data?.isImpersonating && (
+        <div className="bg-[#6C5CE7] text-white text-xs font-semibold px-6 py-2.5 flex flex-wrap items-center justify-between gap-2 shadow-sm z-50">
+          <span>You are currently impersonating <strong>{cafeName}</strong>. Every action is recorded in the platform audit log.</span>
+          <button onClick={stopImpersonating} className="bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded transition-colors font-bold uppercase tracking-wider text-[10px]">
+            Stop Impersonating
+          </button>
+        </div>
+      )}
       {/* ─── Top bar ─── */}
       <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-border">
         <div className="flex items-center justify-between px-4 lg:px-8 h-16">
@@ -253,7 +294,7 @@ export default function DashboardPage() {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="font-display font-bold text-base lg:text-lg text-ink leading-tight">
-                  Haku&apos;s Coffeehouse
+                  {cafeName}
                 </h1>
                 <span className="status-dot status-dot--open" title="Open" />
               </div>
@@ -311,8 +352,9 @@ export default function DashboardPage() {
       <div className="px-4 lg:px-8 py-6 space-y-6 max-w-[1400px]">
 
         {/* ─── Stat cards grid ─── */}
+        {loading ? <div className="animate-pulse h-32 bg-bg-subtle rounded-card w-full" /> : 
         <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 lg:gap-4">
-          {stats.map((stat) => {
+          {statsList.map((stat: any) => {
             const Icon = stat.icon;
             const isHero = stat.hero;
 
@@ -369,6 +411,7 @@ export default function DashboardPage() {
             );
           })}
         </div>
+        }
 
         {/* ─── Charts section ─── */}
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
@@ -431,7 +474,7 @@ export default function DashboardPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {RECENT_ORDERS.map((order) => (
+                {recentOrders.map((order: any) => (
                   <tr
                     key={order.id}
                     className="hover:bg-bg-subtle/40 transition-colors group"

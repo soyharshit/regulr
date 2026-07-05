@@ -29,8 +29,8 @@ Complete Milestone 1: Setup the Prisma Database Schema, implement tenant-isolate
   2. Run Explorer to design schema, repositories, middleware, and tests [done]
   3. Run Worker to implement setup, schema, repos, middleware, auth, and tests [done]
   4. Run Reviewers, Challengers, and Forensic Auditor to verify [in-progress]
-- **Current phase**: 4 (Verification & Gate)
-- **Current focus**: Monitoring the verification subagents (Reviewers, Challengers, Auditor)
+- **Current phase**: 2A (Loop back: Dispatch Explorers for Remediation)
+- **Current focus**: Analyzing INTEGRITY VIOLATION and dispatching Gen 3 Explorers to fix tenant isolation IDORs and build errors.
 
 ## 🔒 Key Constraints
 - All database transactions must filter strictly by `cafeId` via a repository layer. Direct Prisma client imports in application components are strictly forbidden.
@@ -41,7 +41,7 @@ Complete Milestone 1: Setup the Prisma Database Schema, implement tenant-isolate
 - Never reuse a subagent after it has delivered its handoff.
 
 ## Current Parent
-- Conversation ID: b83e21eb-fe00-44d0-8580-02477358221c
+- Conversation ID: d724bfa9-7ebb-48b5-8677-8dd06380bae5
 - Updated: not yet
 
 ## Key Decisions Made
@@ -56,21 +56,27 @@ Complete Milestone 1: Setup the Prisma Database Schema, implement tenant-isolate
 | Explorer 2 | teamwork_preview_explorer | Middleware & Auth analysis | completed | b4f8834e-e360-475e-847b-fb05e9a37664 |
 | Explorer 3 | teamwork_preview_explorer | Testing & Build analysis | completed | d4f24a31-817b-4ab9-b112-415430170539 |
 | Worker 1 | teamwork_preview_worker | Implement M1 code & tests | completed | 000f0300-e556-4e94-a0e0-821500932661 |
-| Reviewer 1 | teamwork_preview_reviewer | Review implementation quality | in-progress | 943d072b-368e-44dd-9019-dd68aa5ec4a0 |
-| Reviewer 2 | teamwork_preview_reviewer | Review implementation quality | in-progress | 175196a9-403b-43fe-a078-f532d5481daf |
-| Challenger 1 | teamwork_preview_challenger | Empirical correctness verification | in-progress | bad50844-5e35-429a-8a49-a5188b6c38de |
-| Challenger 2 | teamwork_preview_challenger | Empirical correctness verification | in-progress | 1cfaa542-3025-454c-b3e5-e2df3fe83414 |
-| Auditor 1 | teamwork_preview_auditor | Forensic integrity audit | in-progress | 9d642f2b-5244-4183-bfe3-f67735708307 |
+| Reviewer 1 | teamwork_preview_reviewer | Review implementation quality | dead (hung) | 943d072b-368e-44dd-9019-dd68aa5ec4a0 |
+| Reviewer 2 | teamwork_preview_reviewer | Review implementation quality | dead (hung) | 175196a9-403b-43fe-a078-f532d5481daf |
+| Challenger 1 | teamwork_preview_challenger | Empirical correctness verification | dead (hung) | bad50844-5e35-429a-8a49-a5188b6c38de |
+| Challenger 2 | teamwork_preview_challenger | Empirical correctness verification | dead (hung) | 1cfaa542-3025-454c-b3e5-e2df3fe83414 |
+| Auditor 1 | teamwork_preview_auditor | Forensic integrity audit | dead (hung) | 9d642f2b-5244-4183-bfe3-f67735708307 |
+
+| Reviewer 1 (gen 2) | teamwork_preview_reviewer | Review implementation quality | in-progress | 06d0c081-ca84-49af-9449-52ff58fdbfd0 |
+| Reviewer 2 (gen 2) | teamwork_preview_reviewer | Review implementation quality | in-progress | 5a4a0805-bcfd-42ab-b110-fd53f87cfb9f |
+| Challenger 1 (gen 2) | teamwork_preview_challenger | Empirical correctness verification | in-progress | b4595fdb-7610-41e7-a074-2690d8240b34 |
+| Challenger 2 (gen 2) | teamwork_preview_challenger | Empirical correctness verification | in-progress | 29ce3ec6-4569-4050-8332-13de762e4e23 |
+| Auditor 1 (gen 2) | teamwork_preview_auditor | Forensic integrity audit | in-progress | 8e5b6964-5d6a-48dc-8080-6e25da26a8ff |
 
 ## Succession Status
 - Succession required: no
-- Spawn count: 9 / 16
-- Pending subagents: 943d072b-368e-44dd-9019-dd68aa5ec4a0, 175196a9-403b-43fe-a078-f532d5481daf, bad50844-5e35-429a-8a49-a5188b6c38de, 1cfaa542-3025-454c-b3e5-e2df3fe83414, 9d642f2b-5244-4183-bfe3-f67735708307
+- Spawn count: 14 / 16
+- Pending subagents: 06d0c081-ca84-49af-9449-52ff58fdbfd0, 5a4a0805-bcfd-42ab-b110-fd53f87cfb9f, b4595fdb-7610-41e7-a074-2690d8240b34, 29ce3ec6-4569-4050-8332-13de762e4e23, 8e5b6964-5d6a-48dc-8080-6e25da26a8ff
 - Predecessor: none
 - Successor: not yet spawned
 
 ## Active Timers
-- Heartbeat cron: 2efe71df-9cb9-4059-a717-a8388f152c66/task-31
+- Heartbeat cron: fc71c8be-2ab7-43e6-b2fa-3f41b405c33f/task-18
 - Safety timer: none
 
 ## Artifact Index

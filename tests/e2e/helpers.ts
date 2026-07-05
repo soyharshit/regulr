@@ -1,12 +1,13 @@
 export function getTenantUrl(tenant: string, path: string = "/", useSubdomain = true) {
-  const baseUrl = "localhost:3000";
+  const baseUrl = (process.env.PLAYWRIGHT_BASE_URL || "http://localhost:3100").replace(/\/$/, "");
   if (useSubdomain) {
     if (tenant === "marketing" || tenant === "www") {
-      return `http://${baseUrl}${path}`;
+      return `${baseUrl}${path}`;
     }
-    return `http://${tenant}.${baseUrl}${path}`;
+    const url = new URL(baseUrl);
+    return `${url.protocol}//${tenant}.${url.host}${path}`;
   } else {
     const separator = path.includes("?") ? "&" : "?";
-    return `http://${baseUrl}${path}${separator}__cafe=${tenant}`;
+    return `${baseUrl}${path}${separator}__cafe=${tenant}`;
   }
 }

@@ -3,7 +3,7 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import { db } from './db';
 import bcrypt from 'bcryptjs';
 
-const isDev = process.env.NODE_ENV === 'development';
+const isProd = process.env.NODE_ENV === 'production';
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -56,13 +56,13 @@ export const authOptions: NextAuthOptions = {
   },
   cookies: {
     sessionToken: {
-      name: isDev ? 'next-auth.session-token' : '__Secure-next-auth.session-token',
+      name: isProd ? '__Secure-next-auth.session-token' : 'next-auth.session-token',
       options: {
         httpOnly: true,
         sameSite: 'lax',
         path: '/',
-        domain: isDev ? '.localhost' : '.regulr.in',
-        secure: !isDev,
+        domain: isProd ? '.regulr.in' : '.localhost',
+        secure: isProd,
       },
     },
   },

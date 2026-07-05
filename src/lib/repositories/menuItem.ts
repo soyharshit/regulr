@@ -43,9 +43,13 @@ export async function update(
   if (!existing) {
     throw new Error(`MenuItem not found or unauthorized for cafeId: ${cafeId}`);
   }
+  const safeData: any = { ...data };
+  delete safeData.cafeId;
+  delete safeData.cafe;
+
   return db.menuItem.update({
     where: { id },
-    data,
+    data: safeData,
   });
 }
 

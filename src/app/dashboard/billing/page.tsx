@@ -17,7 +17,7 @@ export default function BillingPage() {
   const [payment, setPayment] = useState('CASH');
 
   useEffect(() => {
-    fetch('/api/dashboard/summary?slug=brew-haven')
+    fetch('/api/dashboard/summary')
       .then((r) => (r.ok ? r.json() : null))
       .then(async (d) => {
         if (!d?.cafe?.id) return;
@@ -54,30 +54,23 @@ export default function BillingPage() {
       body: JSON.stringify({
         cafeId,
         paymentMethod: payment,
-        items: cart.map((l) => ({ menuItemId: l.id, quantity: l.qty })),
+        totalAmount: total,
+        items: cart.map((l) => {
+          const item = menu.find(m => m.id === l.id);
+          return { menuItemId: l.id, quantity: l.qty, price: item?.price || 0 };
+        }),
       }),
     });
     const order = await res.json();
     if (!res.ok) return;
-    const lines = cart
-      .map((l) => {
-        const item = menu.find((m) => m.id === l.id);
-        return `${item?.name} x${l.qty} — ₹${((item?.price || 0) * l.qty) / 100}`;
-      })
-      .join('\n');
-    setInvoice(`Invoice #${order.id.slice(0, 8)}\n${lines}\nTotal: ₹${total / 100}\nPayment: ${payment}`);
+    
+    setInvoice(order.id); // store just the ID to show the download link
     setCart([]);
   };
 
   const downloadPdf = () => {
     if (!invoice) return;
-    const blob = new Blob([invoice], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'invoice.txt';
-    a.click();
-    URL.revokeObjectURL(url);
+    window.open(`/api/orders/${invoice}/invoice`, '_blank');
   };
 
   return (
@@ -140,10 +133,10 @@ export default function BillingPage() {
         </button>
       </div>
       {invoice && (
-        <div className="rounded-card bg-success-soft p-4 text-sm whitespace-pre-line" data-testid="invoice-receipt">
-          {invoice}
-          <button type="button" onClick={downloadPdf} className="mt-3 block text-primary font-semibold text-xs">
-            Download receipt
+        <div className="rounded-card bg-success-soft p-4 text-sm" data-testid="invoice-receipt">
+          <p className="font-medium text-success-heavy mb-2">Invoice generated successfully!</p>
+          <button type="button" onClick={downloadPdf} className="block w-full py-2 bg-white rounded-control text-primary font-semibold text-xs text-center border border-success">
+            Download PDF Receipt
           </button>
         </div>
       )}
