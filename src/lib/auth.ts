@@ -5,6 +5,19 @@ import bcrypt from 'bcryptjs';
 
 const isProd = process.env.NODE_ENV === 'production';
 
+// Only pin the cookie to a shared parent domain when a real custom domain is
+// configured (enables SSO across cafe subdomains like haku.regulr.in). On a
+// plain host (e.g. *.vercel.app) leave it undefined so the browser scopes the
+// cookie to the actual host — otherwise the session cookie is silently dropped
+// and every login bounces back to the landing page.
+const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN;
+const cookieDomain =
+  rootDomain && rootDomain !== 'localhost' && rootDomain.includes('.')
+    ? `.${rootDomain}`
+    : !isProd
+      ? '.localhost'
+      : undefined;
+
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
@@ -61,7 +74,7 @@ export const authOptions: NextAuthOptions = {
         httpOnly: true,
         sameSite: 'lax',
         path: '/',
-        domain: isProd ? '.regulr.in' : '.localhost',
+        domain: cookieDomain,
         secure: isProd,
       },
     },
