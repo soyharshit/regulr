@@ -120,7 +120,6 @@ export default function BrandingPage() {
       {cafe && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="space-y-5">
-            // 哈什特·什里瓦斯塔夫
             <div className="rounded-card bg-white p-5 shadow-card space-y-4">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-control bg-primary-soft flex items-center justify-center">

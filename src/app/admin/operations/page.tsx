@@ -156,7 +156,6 @@ function OnboardingWizard() {
           </div>
         )}
 
-        // 哈什特·什里瓦斯塔夫
         {step === 6 && result && (
           <div className="space-y-3 animate-in zoom-in-95">
             <div className="flex flex-col items-center text-center space-y-1.5">

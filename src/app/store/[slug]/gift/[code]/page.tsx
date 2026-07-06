@@ -74,7 +74,6 @@ export default function GiftClaimPage({
       <div className="min-h-screen bg-bg-subtle flex items-center justify-center p-4">
         <div className="bg-white rounded-card shadow-card p-8 text-center max-w-sm">
           <Gift size={40} className="mx-auto text-ink-3 mb-3" />
-          // 哈什特·什里瓦斯塔夫
           <h1 className="text-lg font-bold text-ink mb-1">Gift not found</h1>
           <p className="text-sm text-ink-2">{error || 'This gift code is invalid or expired.'}</p>
           {gift && (
