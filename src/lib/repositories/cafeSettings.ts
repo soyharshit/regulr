@@ -20,6 +20,7 @@ export interface GrowthSettings {
   streakMilestones: number[];
   coupons: Coupon[];
   rewards: Reward[];
+  gstRate: number;
 }
 
 const DEFAULT_SETTINGS: GrowthSettings = {
@@ -28,6 +29,7 @@ const DEFAULT_SETTINGS: GrowthSettings = {
   streakMilestones: [3, 7, 14, 30],
   coupons: [{ code: "WELCOME10", discountPercent: 10, maxUses: 500 }],
   rewards: [],
+  gstRate: 0.05,
 };
 
 function parse(raw: {
@@ -36,6 +38,7 @@ function parse(raw: {
   streakMilestones: string;
   coupons: string;
   rewards?: string;
+  gstRate: number;
 }): GrowthSettings {
   return {
     loyaltyEnabled: raw.loyaltyEnabled,
@@ -43,6 +46,7 @@ function parse(raw: {
     streakMilestones: JSON.parse(raw.streakMilestones || "[]"),
     coupons: JSON.parse(raw.coupons || "[]"),
     rewards: JSON.parse(raw.rewards || "[]"),
+    gstRate: raw.gstRate ?? 0.05,
   };
 }
 
@@ -63,6 +67,7 @@ export async function upsert(
     streakMilestones: settings.streakMilestones ?? current.streakMilestones,
     coupons: settings.coupons ?? current.coupons,
     rewards: settings.rewards ?? current.rewards,
+    gstRate: settings.gstRate ?? current.gstRate,
   };
 
   const payload = {
@@ -71,6 +76,7 @@ export async function upsert(
     streakMilestones: JSON.stringify(merged.streakMilestones),
     coupons: JSON.stringify(merged.coupons),
     rewards: JSON.stringify(merged.rewards),
+    gstRate: merged.gstRate,
   };
 
   await db.cafeSettings.upsert({

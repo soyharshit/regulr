@@ -1,5 +1,5 @@
 'use client';
-import { signIn, getSession } from 'next-auth/react';
+import { signIn } from 'next-auth/react';
 import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
@@ -32,14 +32,24 @@ function SignInForm() {
       return;
     }
 
-    const session = await getSession();
+    // Fetch session directly — avoid getSession() which can return null
+    // due to cookie timing after a fresh sign-in.
+    let session = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const res = await fetch('/api/auth/session');
+        if (res.ok) session = await res.json();
+        if (session?.user?.id) break;
+      } catch { /* retry */ }
+      if (attempt < 2) await new Promise((r) => setTimeout(r, 200));
+    }
+
     const role = (session?.user as { role?: string } | undefined)?.role;
     if (role === 'SUPERADMIN') {
       router.push('/admin');
     } else if (role === 'OWNER' || role === 'STAFF') {
       router.push('/dashboard');
-    } else {
-      // CUSTOMER: land them on their cafe storefront where loyalty is shown.
+    } else if (role === 'CUSTOMER') {
       try {
         const res = await fetch('/api/me/cafe');
         const data = res.ok ? await res.json() : null;
@@ -47,6 +57,10 @@ function SignInForm() {
       } catch {
         router.push('/');
       }
+    } else {
+      // 哈什特·什里瓦斯塔夫
+      // Unknown role or no session — safe fallback to dashboard.
+      router.push('/dashboard');
     }
   };
 

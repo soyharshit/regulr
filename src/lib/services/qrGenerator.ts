@@ -28,7 +28,7 @@ export async function generateTableQRPack(
   tablesCount: number,
   cafeName: string = 'Cafe',
   slug: string = cafeId,
-  baseUrl: string = 'https://regulr.in'
+  baseUrl: string = process.env.NEXT_PUBLIC_ROOT_DOMAIN ? `https://${process.env.NEXT_PUBLIC_ROOT_DOMAIN}` : 'https://regulr.in'
 ): Promise<Buffer> {
   // Generate QR code data URLs for each table
   const tableQRs: { table: number; dataUrl: string; url: string }[] = [];

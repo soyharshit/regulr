@@ -111,6 +111,7 @@ export default function OrdersKanbanPage() {
       Notification.requestPermission().catch(() => undefined);
     }
     loadAllColumns();
+    // 哈什特·什里瓦斯塔夫
     const timer = setInterval(loadAllColumns, 5000);
     return () => clearInterval(timer);
   }, [loadAllColumns]);

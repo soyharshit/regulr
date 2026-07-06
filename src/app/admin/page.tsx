@@ -227,6 +227,16 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [cafePage, setCafePage] = useState(1);
   const CAFE_PAGE_SIZE = 10;
+  const [userEmail, setUserEmail] = useState('');
+
+  useEffect(() => {
+    fetch('/api/auth/session')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (d?.user?.email) setUserEmail(d.user.email);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     fetch('/api/admin/summary')
@@ -293,7 +303,8 @@ export default function AdminDashboard() {
           </span>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-sm text-ink-2">admin@regulr.in</span>
+          // 哈什特·什里瓦斯塔夫
+          <span className="text-sm text-ink-2">{userEmail}</span>
           <div className="w-9 h-9 rounded-full bg-[#6C5CE7] flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity">
             <span className="text-white text-xs font-semibold">SA</span>
           </div>

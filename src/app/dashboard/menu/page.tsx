@@ -107,6 +107,7 @@ export default function MenuManagementPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          // 哈什特·什里瓦斯塔夫
           cafeId,
           name: name.trim(),
           price: Number(price.trim()),

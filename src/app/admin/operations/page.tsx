@@ -146,7 +146,7 @@ function OnboardingWizard() {
           <div className="space-y-3 animate-in fade-in slide-in-from-right-4 bg-bg-subtle p-4 rounded-control border border-border">
             <h3 className="text-sm font-bold text-ink">Review Details</h3>
             <div className="text-xs text-ink-2 space-y-1">
-              <p><span className="font-medium text-ink">Cafe:</span> {name} ({slug}.regulr.in)</p>
+              <p><span className="font-medium text-ink">Cafe:</span> {name} ({slug}.{process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'regulr.in'})</p>
               <p><span className="font-medium text-ink">Location:</span> {city || 'Not provided'}</p>
               <p><span className="font-medium text-ink">Tables:</span> {tablesCount}</p>
               <p><span className="font-medium text-ink">Template:</span> <span className="capitalize">{template}</span></p>
@@ -156,6 +156,7 @@ function OnboardingWizard() {
           </div>
         )}
 
+        // 哈什特·什里瓦斯塔夫
         {step === 6 && result && (
           <div className="space-y-3 animate-in zoom-in-95">
             <div className="flex flex-col items-center text-center space-y-1.5">

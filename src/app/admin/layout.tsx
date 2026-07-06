@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
@@ -33,6 +33,20 @@ export default function AdminLayout({
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [userName, setUserName] = useState('Super Admin');
+  const [userEmail, setUserEmail] = useState('');
+
+  useEffect(() => {
+    fetch('/api/auth/session')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (d?.user) {
+          setUserName(d.user.name || 'Super Admin');
+          setUserEmail(d.user.email || '');
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   return (
     <div className="flex min-h-screen bg-bg-subtle">
@@ -149,8 +163,8 @@ export default function AdminLayout({
                 <span className="text-white text-xs font-semibold">SA</span>
               </div>
               <div className={`min-w-0 ${collapsed ? 'lg:hidden' : ''}`}>
-                <p className="text-sm font-medium text-ink truncate">Super Admin</p>
-                <p className="text-xs text-ink-3 truncate">superadmin@regulr.in</p>
+                <p className="text-sm font-medium text-ink truncate">{userName}</p>
+                <p className="text-xs text-ink-3 truncate">{userEmail}</p>
               </div>
             </div>
             

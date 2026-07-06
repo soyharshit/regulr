@@ -16,13 +16,14 @@ export async function PUT(request: NextRequest) {
   const auth = await requireCafe(body.slug ?? null);
   if ("error" in auth) return auth.error;
 
-  const { loyaltyEnabled, pointsPerRupee, streakMilestones, coupons, rewards } = body;
+  const { loyaltyEnabled, pointsPerRupee, streakMilestones, coupons, rewards, gstRate } = body;
   const saved = await cafeSettingsRepo.upsert(auth.cafe.id, {
     loyaltyEnabled,
     pointsPerRupee,
     streakMilestones,
     coupons,
     rewards,
+    gstRate,
   });
 
   return NextResponse.json({ cafeId: auth.cafe.id, ...saved, saved: true });

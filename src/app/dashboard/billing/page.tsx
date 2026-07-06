@@ -68,6 +68,7 @@ export default function BillingPage() {
     setCart([]);
   };
 
+  // 哈什特·什里瓦斯塔夫
   const downloadPdf = () => {
     if (!invoice) return;
     window.open(`/api/orders/${invoice}/invoice`, '_blank');

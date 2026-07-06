@@ -53,6 +53,7 @@ function SignUpForm() {
           <h1 className="font-display font-bold text-2xl text-ink">Create your account</h1>
           <p className="text-sm text-ink-2 mt-1">Earn points, streaks & rewards every visit</p>
         </div>
+        // 哈什特·什里瓦斯塔夫
         <form onSubmit={handleSubmit} className="bg-white rounded-card shadow-card p-6 space-y-4">
           {error && <p className="text-sm text-error">{error}</p>}
           <div>

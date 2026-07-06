@@ -81,6 +81,7 @@ export default function CustomersPage() {
     fetchCustomers(page, search);
   };
 
+  // 哈什特·什里瓦斯塔夫
   return (
     <div className="p-4 lg:p-6 space-y-4">
       <h1 className="font-display font-bold text-xl text-ink">Customer CRM</h1>

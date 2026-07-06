@@ -30,76 +30,7 @@ function formatINR(amount: number): string {
 
 type RangeKey = 'today' | '7d' | '30d';
 
-interface OrderRow {
-  id: string;
-  items: string;
-  type: string;
-  amount: number;
-  status: string;
-  customer: string;
-  tier: string;
-  timeAgo: string;
-}
 
-
-/* ──────────────────────────── mock data ──────────────────────────── */
-
-interface StatCard {
-  id: string;
-  icon: typeof Coffee;
-  label: string;
-  value: string;
-  delta: number | null;
-  hero?: boolean;
-  subtitle?: string;
-}
-
-const STATS: Record<RangeKey, StatCard[]> = {
-  today: [
-    { id: 'orders', icon: ShoppingBag, label: 'Direct Orders', value: '42', delta: 12 },
-    { id: 'revenue', icon: BadgeIndianRupee, label: 'Direct Revenue', value: '₹38,400', delta: 8 },
-    { id: 'commission', icon: PiggyBank, label: 'Commission Saved', value: '₹9,600', delta: null, hero: true, subtitle: 'vs 25% marketplace rate' },
-    { id: 'repeat', icon: Repeat2, label: 'Repeat Rate', value: '68%', delta: 5 },
-    { id: 'streaks', icon: Flame, label: 'Active Streaks', value: '34', delta: null },
-    { id: 'new', icon: UserPlus, label: 'New Customers', value: '12', delta: 3 },
-  ],
-  '7d': [
-    { id: 'orders', icon: ShoppingBag, label: 'Direct Orders', value: '318', delta: 9 },
-    { id: 'revenue', icon: BadgeIndianRupee, label: 'Direct Revenue', value: '₹2,84,600', delta: 11 },
-    { id: 'commission', icon: PiggyBank, label: 'Commission Saved', value: '₹71,150', delta: null, hero: true, subtitle: 'vs 25% marketplace rate' },
-    { id: 'repeat', icon: Repeat2, label: 'Repeat Rate', value: '64%', delta: 3 },
-    { id: 'streaks', icon: Flame, label: 'Active Streaks', value: '89', delta: null },
-    { id: 'new', icon: UserPlus, label: 'New Customers', value: '76', delta: 14 },
-  ],
-  '30d': [
-    { id: 'orders', icon: ShoppingBag, label: 'Direct Orders', value: '1,284', delta: 18 },
-    { id: 'revenue', icon: BadgeIndianRupee, label: 'Direct Revenue', value: '₹11,20,400', delta: 22 },
-    { id: 'commission', icon: PiggyBank, label: 'Commission Saved', value: '₹2,80,100', delta: null, hero: true, subtitle: 'vs 25% marketplace rate' },
-    { id: 'repeat', icon: Repeat2, label: 'Repeat Rate', value: '61%', delta: 2 },
-    { id: 'streaks', icon: Flame, label: 'Active Streaks', value: '142', delta: null },
-    { id: 'new', icon: UserPlus, label: 'New Customers', value: '214', delta: 27 },
-  ],
-};
-
-const CHART_POINTS: { y: number }[] = [
-  { y: 32 }, { y: 45 }, { y: 38 }, { y: 55 }, { y: 48 }, { y: 68 }, { y: 62 },
-];
-
-const TOP_ITEMS: { icon: typeof Coffee; name: string; count: number; percent: number }[] = [
-  { icon: Coffee, name: 'Oat Milk Latte', count: 128, percent: 100 },
-  { icon: Coffee, name: 'Cold Brew Black', count: 96, percent: 75 },
-  { icon: Coffee, name: 'Cappuccino', count: 82, percent: 64 },
-  { icon: Coffee, name: 'Masala Chai', count: 71, percent: 55 },
-  { icon: Coffee, name: 'Butter Croissant', count: 54, percent: 42 },
-];
-
-const RECENT_ORDERS: OrderRow[] = [
-  { id: '1042', items: '2× Oat Milk Latte, 1× Croissant', type: 'Dine-in', amount: 66000, status: 'PAID', customer: 'Priya S.', tier: 'GOLD', timeAgo: '2m ago' },
-  { id: '1041', items: '1× Cold Brew Black', type: 'Takeaway', amount: 18000, status: 'PREPARING', customer: 'Arjun M.', tier: 'SILVER', timeAgo: '6m ago' },
-  { id: '1040', items: '3× Masala Chai, 2× Samosa', type: 'Dine-in', amount: 42000, status: 'READY', customer: 'Sneha I.', tier: 'BRONZE', timeAgo: '11m ago' },
-  { id: '1039', items: '1× Cappuccino, 1× Muffin', type: 'Takeaway', amount: 34000, status: 'PAID', customer: 'Rahul K.', tier: 'GOLD', timeAgo: '18m ago' },
-  { id: '1038', items: '2× Cappuccino', type: 'Dine-in', amount: 44000, status: 'PAID', customer: 'Walk-in', tier: 'BRONZE', timeAgo: '24m ago' },
-];
 
 /* ──────────────────────────── components ──────────────────────────── */
 
@@ -162,7 +93,10 @@ function RevenueChart({ series }: { series?: { y: number }[] }) {
   const padX = 0;
   const padY = 8;
 
-  const src = series && series.length > 1 ? series : CHART_POINTS;
+  const FALLBACK_POINTS: { y: number }[] = [
+    { y: 32 }, { y: 45 }, { y: 38 }, { y: 55 }, { y: 48 }, { y: 68 }, { y: 62 },
+  ];
+  const src = series && series.length > 1 ? series : FALLBACK_POINTS;
   const points = src.map((p, i) => ({
     x: padX + (i / (src.length - 1)) * (W - padX * 2),
     y: padY + (p.y / 80) * (H - padY * 2),
@@ -210,7 +144,14 @@ function RevenueChart({ series }: { series?: { y: number }[] }) {
 }
 
 function TopItemsChart({ items }: { items?: { name: string; count: number; percent: number }[] }) {
-  const src = items && items.length > 0 ? items : TOP_ITEMS;
+  const FALLBACK_ITEMS: { name: string; count: number; percent: number }[] = [
+    { name: 'Oat Milk Latte', count: 128, percent: 100 },
+    { name: 'Cold Brew Black', count: 96, percent: 75 },
+    { name: 'Cappuccino', count: 82, percent: 64 },
+    { name: 'Masala Chai', count: 71, percent: 55 },
+    { name: 'Butter Croissant', count: 54, percent: 42 },
+  ];
+  const src = items && items.length > 0 ? items : FALLBACK_ITEMS;
   return (
     <div className="space-y-3">
       {src.map((item) => {
@@ -309,6 +250,7 @@ export default function DashboardPage() {
       .catch(() => setLoading(false));
   }, [range]);
 
+  // 哈什特·什里瓦斯塔夫
   const statsList = data?.stats ? [
     { id: 'orders', icon: ShoppingBag, label: 'Direct Orders', value: data.stats.orders.toString(), delta: null },
     { id: 'revenue', icon: BadgeIndianRupee, label: 'Direct Revenue', value: formatINR(data.stats.revenue), delta: null },
@@ -316,10 +258,10 @@ export default function DashboardPage() {
     { id: 'repeat', icon: Repeat2, label: 'Repeat Rate', value: `${data.stats.repeatRate}%`, delta: null },
     { id: 'streaks', icon: Flame, label: 'Active Streaks', value: data.stats.activeStreaks.toString(), delta: null },
     { id: 'new', icon: UserPlus, label: 'New Customers', value: data.stats.newCustomers.toString(), delta: null },
-  ] : STATS[range];
+  ] : [];
 
-  const recentOrders = data?.recentOrders || RECENT_ORDERS;
-  const cafeName = data?.cafe?.name || "Haku's Coffeehouse";
+  const recentOrders = data?.recentOrders;
+  const cafeName = data?.cafe?.name || '';
 
   // Real chart data (falls back to the mock arrays inside the chart components).
   const revenueSeries: { y: number }[] | undefined = (() => {
@@ -355,7 +297,6 @@ export default function DashboardPage() {
                 </h1>
                 <span className="status-dot status-dot--open" title="Open" />
               </div>
-              <p className="text-xs text-ink-3 hidden sm:block">Koramangala, Bangalore</p>
             </div>
           </div>
 
@@ -531,58 +472,71 @@ export default function DashboardPage() {
             </button>
           </div>
 
-          {/* Orders table */}
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px]">
-              <thead>
-                <tr className="bg-bg-subtle/60">
-                  <th className="text-left text-[11px] font-semibold text-ink-3 uppercase tracking-wider px-5 py-2.5">Order</th>
-                  <th className="text-left text-[11px] font-semibold text-ink-3 uppercase tracking-wider px-3 py-2.5">Items</th>
-                  <th className="text-left text-[11px] font-semibold text-ink-3 uppercase tracking-wider px-3 py-2.5">Type</th>
-                  <th className="text-right text-[11px] font-semibold text-ink-3 uppercase tracking-wider px-3 py-2.5">Amount</th>
-                  <th className="text-center text-[11px] font-semibold text-ink-3 uppercase tracking-wider px-3 py-2.5">Status</th>
-                  <th className="text-left text-[11px] font-semibold text-ink-3 uppercase tracking-wider px-3 py-2.5">Customer</th>
-                  <th className="text-right text-[11px] font-semibold text-ink-3 uppercase tracking-wider px-5 py-2.5">Time</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {recentOrders.map((order: any) => (
-                  <tr
-                    key={order.id}
-                    className="hover:bg-bg-subtle/40 transition-colors group"
-                  >
-                    <td className="px-5 py-3">
-                      <span className="text-sm font-semibold text-ink tabular-nums">#{order.id}</span>
-                    </td>
-                    <td className="px-3 py-3">
-                      <span className="text-sm text-ink">{order.items}</span>
-                    </td>
-                    <td className="px-3 py-3">
-                      <TypePill type={order.type} />
-                    </td>
-                    <td className="px-3 py-3 text-right">
-                      <span className="text-sm font-semibold text-ink tabular-nums">{formatINR(order.amount)}</span>
-                    </td>
-                    <td className="px-3 py-3 text-center">
-                      <StatusBadge status={order.status} />
-                    </td>
-                    <td className="px-3 py-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-ink font-medium">{order.customer}</span>
-                        <TierBadge tier={order.tier} />
-                      </div>
-                    </td>
-                    <td className="px-5 py-3 text-right">
-                      <span className="flex items-center justify-end gap-1 text-xs text-ink-3">
-                        <Clock size={12} />
-                        {order.timeAgo}
-                      </span>
-                    </td>
+          {loading ? (
+            <div className="animate-pulse p-5 space-y-4">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="flex items-center gap-4">
+                  <div className="h-4 w-16 bg-bg-subtle rounded" />
+                  <div className="h-4 flex-1 bg-bg-subtle rounded" />
+                  <div className="h-4 w-20 bg-bg-subtle rounded" />
+                </div>
+              ))}
+            </div>
+          ) : recentOrders && recentOrders.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[640px]">
+                <thead>
+                  <tr className="bg-bg-subtle/60">
+                    <th className="text-left text-[11px] font-semibold text-ink-3 uppercase tracking-wider px-5 py-2.5">Order</th>
+                    <th className="text-left text-[11px] font-semibold text-ink-3 uppercase tracking-wider px-3 py-2.5">Items</th>
+                    <th className="text-left text-[11px] font-semibold text-ink-3 uppercase tracking-wider px-3 py-2.5">Type</th>
+                    <th className="text-right text-[11px] font-semibold text-ink-3 uppercase tracking-wider px-3 py-2.5">Amount</th>
+                    <th className="text-center text-[11px] font-semibold text-ink-3 uppercase tracking-wider px-3 py-2.5">Status</th>
+                    <th className="text-left text-[11px] font-semibold text-ink-3 uppercase tracking-wider px-3 py-2.5">Customer</th>
+                    <th className="text-right text-[11px] font-semibold text-ink-3 uppercase tracking-wider px-5 py-2.5">Time</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {recentOrders.map((order: any) => (
+                    <tr
+                      key={order.id}
+                      className="hover:bg-bg-subtle/40 transition-colors group"
+                    >
+                      <td className="px-5 py-3">
+                        <span className="text-sm font-semibold text-ink tabular-nums">#{order.id}</span>
+                      </td>
+                      <td className="px-3 py-3">
+                        <span className="text-sm text-ink">{order.items}</span>
+                      </td>
+                      <td className="px-3 py-3">
+                        <TypePill type={order.type} />
+                      </td>
+                      <td className="px-3 py-3 text-right">
+                        <span className="text-sm font-semibold text-ink tabular-nums">{formatINR(order.amount)}</span>
+                      </td>
+                      <td className="px-3 py-3 text-center">
+                        <StatusBadge status={order.status} />
+                      </td>
+                      <td className="px-3 py-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-ink font-medium">{order.customer}</span>
+                          <TierBadge tier={order.tier} />
+                        </div>
+                      </td>
+                      <td className="px-5 py-3 text-right">
+                        <span className="flex items-center justify-end gap-1 text-xs text-ink-3">
+                          <Clock size={12} />
+                          {order.timeAgo}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="p-6 text-center text-sm text-ink-2">No orders yet.</div>
+          )}
         </div>
 
         {/* Bottom spacer for mobile */}

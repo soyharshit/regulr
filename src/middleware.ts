@@ -1,11 +1,23 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
 
-const ROOT_DOMAIN = process.env.NEXT_PUBLIC_ROOT_DOMAIN || "regulr.in";
+const ROOT_DOMAIN = process.env.NEXT_PUBLIC_ROOT_DOMAIN;
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const url = request.nextUrl.clone();
   const host = request.headers.get("host") || "";
+
+  // Redirect logged-in users away from the marketing landing page.
+  if (url.pathname === "/" || url.pathname === "/marketing") {
+    const token = await getToken({
+      req: request,
+      secret: process.env.NEXTAUTH_SECRET,
+    });
+    if (token?.sub) {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
+  }
 
   // Strip port for comparison
   const hostname = host.split(":")[0];

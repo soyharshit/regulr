@@ -8,8 +8,6 @@ import * as cafeSettingsRepo from '@/lib/repositories/cafeSettings';
 import { calculateOrderTotal, POINTS_TO_PAISE_RATE } from '@/lib/pricing/pricingEngine';
 import { requireCafe } from '@/lib/apiAuth';
 
-const GST_RATE = 0.05;
-
 // Owner/staff order feed — scoped to the caller's own cafe (session-derived).
 // Supports ?page=&limit=&status= for pagination. Without params returns all (backward compat).
 export async function GET(request: NextRequest) {
@@ -40,7 +38,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { cafeId, items, paymentMethod, couponCode, pointsToRedeem, tableNumber } = body;
+    const { cafeId, items, paymentMethod, couponCode, pointsToRedeem, tableNumber, tipAmount, specialInstructions } = body;
 
     if (!cafeId || !items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ error: 'cafeId and items are required' }, { status: 400 });
@@ -115,11 +113,12 @@ export async function POST(request: NextRequest) {
       pointsRequested = Math.max(0, Math.min(Math.round(Number(pointsToRedeem)) || 0, customer.points));
     }
 
+    const cafeSettings = await cafeSettingsRepo.getByCafeId(cafeId);
     const pricing = calculateOrderTotal({
       subtotal,
       resolvedCoupon,
       loyaltyTierPointsApplied: pointsRequested,
-      gstRate: GST_RATE,
+      gstRate: cafeSettings.gstRate,
     });
 
     // Only burn the points that actually produced a discount (the engine caps
@@ -133,7 +132,9 @@ export async function POST(request: NextRequest) {
       couponCode: resolvedCoupon ? resolvedCoupon.code : null,
       pointsRedeemed: pointsUsed,
       tableNumber: Number.isInteger(parsedTable) && parsedTable > 0 ? parsedTable : null,
-      totalAmount: pricing.grandTotal,
+      totalAmount: pricing.grandTotal + (Math.round(Number(tipAmount)) || 0),
+      tipAmount: Math.round(Number(tipAmount)) || 0,
+      specialInstructions: typeof specialInstructions === 'string' ? specialInstructions.trim() || null : null,
       status: 'PENDING',
       paymentMethod: paymentMethod || 'CASH',
       ...(customer ? { customer: { connect: { id: customer.id } } } : {}),

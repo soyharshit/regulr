@@ -50,6 +50,7 @@ export default function AdminAnalyticsPage() {
       ]
     : [];
 
+  // 哈什特·什里瓦斯塔夫
   const maxOrders = Math.max(1, ...cafes.map((c) => c.orders7d));
 
   return (

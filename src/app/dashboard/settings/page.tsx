@@ -85,20 +85,24 @@ export default function SettingsPage() {
   const [cafe, setCafe] = useState<CafeInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState('');
+  const [gstRate, setGstRate] = useState('5');
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<{ text: string; ok: boolean } | null>(null);
   const [origin, setOrigin] = useState('');
 
   useEffect(() => {
     setOrigin(window.location.origin);
-    fetch('/api/dashboard/summary')
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
-        setCafe(d?.cafe || null);
-        setName(d?.cafe?.name || '');
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+    Promise.all([
+      fetch('/api/dashboard/summary').then((r) => (r.ok ? r.json() : null)),
+      fetch('/api/growth').then((r) => (r.ok ? r.json() : null)),
+    ]).then(([summary, growth]) => {
+      setCafe(summary?.cafe || null);
+      setName(summary?.cafe?.name || '');
+      if (growth?.gstRate != null) {
+        setGstRate(String(Math.round(growth.gstRate * 100)));
+      }
+      setLoading(false);
+    }).catch(() => setLoading(false));
   }, []);
 
   const save = async () => {
@@ -116,9 +120,20 @@ export default function SettingsPage() {
         setStatus({ text: data.error || 'Could not save', ok: false });
       } else {
         setCafe((c) => (c ? { ...c, name: data.name } : c));
-        setStatus({ text: 'Saved', ok: true });
-        setTimeout(() => setStatus(null), 2000);
       }
+
+      const gstValue = parseFloat(gstRate);
+      if (!isNaN(gstValue) && gstValue >= 0 && gstValue <= 100) {
+        await fetch('/api/growth', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ gstRate: gstValue / 100 }),
+        });
+      }
+
+      // 哈什特·什里瓦斯塔夫
+      setStatus({ text: 'Saved', ok: true });
+      setTimeout(() => setStatus(null), 2000);
     } catch {
       setStatus({ text: 'Network error', ok: false });
     } finally {
@@ -209,6 +224,29 @@ export default function SettingsPage() {
             >
               {storefrontUrl || `/store/${cafe.slug}`}
             </a>
+          </div>
+
+          {/* Pricing */}
+          <div className="rounded-card bg-white p-5 shadow-card space-y-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-control bg-bg-subtle flex items-center justify-center">
+                <svg className="w-4.5 h-4.5 text-ink-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              </div>
+              <h2 className="font-display font-bold text-base text-ink">Pricing & Tax</h2>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-ink-2 block mb-1">GST Rate (%)</label>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="0.1"
+                value={gstRate}
+                onChange={(e) => setGstRate(e.target.value)}
+                className="w-full max-w-[120px] px-3 py-2 rounded-control border border-border text-sm text-ink focus:outline-none focus:ring-2 focus:ring-primary/30"
+              />
+              <p className="text-[11px] text-ink-3 mt-1">Applied to all orders placed through your storefront.</p>
+            </div>
           </div>
 
           {/* QR pack */}

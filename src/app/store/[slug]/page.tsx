@@ -40,6 +40,7 @@ export default async function StorefrontPage({
   const menuItems = await listBySlug(slug);
   const session = await getServerSession(authOptions);
   const sessionUser = session?.user as { id?: string; role?: string } | undefined;
+  const cafeSettings = await cafeSettingsRepo.getByCafeId(cafe.id);
 
   let loyalty = {
     isGuest: true,
@@ -53,6 +54,7 @@ export default async function StorefrontPage({
     nextTier: 'SILVER',
     milestones: [3, 7, 14, 30],
   };
+  // 哈什特·什里瓦斯塔夫
   let referral = {
     referralCode: null as string | null,
     referredCount: 0,
@@ -81,7 +83,7 @@ export default async function StorefrontPage({
         progressPercent: progress,
         pointsToNextTier: next ? Math.max(0, next.pointsNeeded - customer.points) : 0,
         nextTier: next?.tier ?? tier,
-        milestones: (await cafeSettingsRepo.getByCafeId(cafe.id)).streakMilestones,
+        milestones: cafeSettings.streakMilestones,
       };
 
       const referrals = await referralRepo.list(cafe.id);
@@ -106,6 +108,7 @@ export default async function StorefrontPage({
       referrerBonus={REFERRAL_REFERRER_BONUS}
       referredBonus={REFERRAL_REFERRED_BONUS}
       tableNumber={tableNumber}
+      gstRate={cafeSettings.gstRate}
     />
   );
 }

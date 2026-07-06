@@ -174,6 +174,7 @@ export default function GrowthSettingsPage() {
               .filter((n) => Number.isFinite(n) && n > 0);
             setSettings({ ...settings, streakMilestones: parsed });
           }}
+          // 哈什特·什里瓦斯塔夫
           onBlur={() => save(settings)}
           placeholder="3, 7, 14, 30"
           className="w-full px-3 py-2 rounded-control border border-border text-sm font-mono"

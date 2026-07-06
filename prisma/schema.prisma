@@ -30,6 +30,7 @@ model Cafe {
   redemptions   RewardRedemption[]
   checkIns      CheckIn[]
   fortuneBoxes  FortuneBox[]
+  gifts         Gift[]
 }
 
 model CafeSettings {
@@ -40,6 +41,7 @@ model CafeSettings {
   streakMilestones String   @default("[3,7,14,30]") // JSON array of numbers
   coupons          String   @default("[]") // JSON array of { code, discountPercent?, discountPaise?, maxUses? }
   rewards          String   @default("[]") // JSON array of { id, title, cost, description? } redeemable with points
+  gstRate          Float    @default(0.05)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
@@ -78,6 +80,7 @@ model Customer {
   redemptions     RewardRedemption[]
   checkIns        CheckIn[]
   fortuneBoxes    FortuneBox[]
+  gifts           Gift[]
 
   @@unique([cafeId, userId])
 }
@@ -97,6 +100,7 @@ model MenuItem {
 
   cafe        Cafe        @relation(fields: [cafeId], references: [id], onDelete: Cascade)
   orderItems  OrderItem[]
+  gifts       Gift[]
 }
 
 model Order {
@@ -112,6 +116,8 @@ model Order {
   bonusPoints     Int         @default(0) // scratch-card surprise bonus, awarded once
   scratchedAt     DateTime?   // when the customer revealed the scratch card
   totalAmount     Int         // in paise, final amount charged
+  tipAmount       Int         @default(0) // in paise
+  specialInstructions String?
   status          String      @default("PENDING") // PENDING, PREPARING, READY, COMPLETED, CANCELLED
   paymentMethod   String      @default("CASH") // CASH, UPI, RAZORPAY
   createdAt       DateTime    @default(now())
@@ -120,6 +126,7 @@ model Order {
   cafe            Cafe        @relation(fields: [cafeId], references: [id], onDelete: Cascade)
   customer        Customer?   @relation(fields: [customerId], references: [id], onDelete: Cascade)
   orderItems      OrderItem[]
+  gifts           Gift[]
 }
 
 model OrderItem {
@@ -202,4 +209,26 @@ model FortuneBox {
   customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   @@unique([cafeId, customerId])
+}
+
+model Gift {
+  id            String    @id @default(uuid())
+  orderId       String
+  cafeId        String
+  customerId    String?
+  menuItemId    String
+  menuItemName  String
+  quantity      Int       @default(1)
+  recipientName String
+  message       String?
+  claimCode     String    @unique // 8-char alphanumeric
+  claimedAt     DateTime?
+  createdByOrder Boolean  @default(false) // was this a pre-ordered gift
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  order         Order     @relation(fields: [orderId], references: [id])
+  cafe          Cafe      @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  customer      Customer? @relation(fields: [customerId], references: [id])
+  menuItem      MenuItem  @relation(fields: [menuItemId], references: [id])
 }

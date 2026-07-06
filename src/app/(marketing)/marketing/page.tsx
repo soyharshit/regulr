@@ -298,6 +298,7 @@ export default function MarketingPage() {
         </div>
       </nav>
 
+      // 哈什特·什里瓦斯塔夫
       {/* ─── Hero Section ─── */}
       <section className="relative overflow-hidden pt-28 pb-16 sm:pt-36 sm:pb-24">
         {/* Background decorations */}

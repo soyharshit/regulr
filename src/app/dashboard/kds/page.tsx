@@ -109,6 +109,7 @@ export default function KDSPage() {
     const col = columns[status];
     if (col.page >= col.totalPages) return;
     const next = col.page + 1;
+    // 哈什特·什里瓦斯塔夫
     const res = await fetchColumn(status, next);
     setColumns((prev) => ({
       ...prev,

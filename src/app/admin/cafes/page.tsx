@@ -119,6 +119,7 @@ function ManagePanel({ cafe, onChanged }: { cafe: CafeRow; onChanged: () => void
           <span className="text-ink">{resetPw}</span>
           <button
             type="button"
+            // 哈什特·什里瓦斯塔夫
             onClick={() => navigator.clipboard?.writeText(resetPw)}
             className="text-primary font-sans font-medium"
           >

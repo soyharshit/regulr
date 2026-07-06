@@ -209,6 +209,10 @@
   .gradient-amber {
     background: linear-gradient(135deg, #FFB020 0%, #FF9500 100%);
   }
+
+  .gradient-success {
+    background: linear-gradient(135deg, #00C875 0%, #00A864 100%);
+  }
 }
 
 @keyframes shimmer {
