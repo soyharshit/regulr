@@ -2,6 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
+import { tierForPoints } from "../src/lib/loyalty";
 
 const databaseUrl = process.env.DATABASE_URL || "file:./dev.db";
 
@@ -214,19 +215,25 @@ async function main() {
     cafeRecords[cafeDef.slug] = cafe;
     console.log(`✓ Cafe: ${cafe.name} (${cafe.slug})`);
 
+    const settingsData = {
+      loyaltyEnabled: true,
+      pointsPerRupee: 1,
+      streakMilestones: JSON.stringify([3, 7, 14, 30]),
+      coupons: JSON.stringify([
+        { code: "WELCOME10", discountPercent: 10, maxUses: 500 },
+        { code: "FLAT50", discountPaise: 5000, maxUses: 200 },
+      ]),
+      rewards: JSON.stringify([
+        { id: "rw_coffee", title: "Free coffee", cost: 200, description: "Any regular hot coffee, on the house" },
+        { id: "rw_pastry", title: "Free pastry", cost: 150, description: "Pick any pastry" },
+        { id: "rw_off50", title: "₹50 off your next order", cost: 100 },
+        { id: "rw_combo", title: "Coffee + croissant combo", cost: 350 },
+      ]),
+    };
     await db.cafeSettings.upsert({
       where: { cafeId: cafe.id },
-      update: {},
-      create: {
-        cafeId: cafe.id,
-        loyaltyEnabled: true,
-        pointsPerRupee: 1,
-        streakMilestones: JSON.stringify([3, 7, 14, 30]),
-        coupons: JSON.stringify([
-          { code: "WELCOME10", discountPercent: 10, maxUses: 500 },
-          { code: "FLAT50", discountPaise: 5000, maxUses: 200 },
-        ]),
-      },
+      update: settingsData,
+      create: { cafeId: cafe.id, ...settingsData },
     });
   }
 
@@ -317,7 +324,7 @@ async function main() {
           where: { id: existing.id },
           data: {
             points: tierDef.points,
-            tier: tierDef.tier,
+            tier: tierForPoints(tierDef.points),
             streakCount: tierDef.streakCount,
             streakCalendar: JSON.stringify(lastNDays(tierDef.streakCount)),
           },
@@ -328,7 +335,7 @@ async function main() {
             cafeId: cafe.id,
             userId: user.id,
             points: tierDef.points,
-            tier: tierDef.tier,
+            tier: tierForPoints(tierDef.points),
             streakCount: tierDef.streakCount,
             streakCalendar: JSON.stringify(lastNDays(tierDef.streakCount)),
           },

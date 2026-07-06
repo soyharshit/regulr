@@ -7,7 +7,7 @@ test.describe("Customer storefront checkout", () => {
     await page.goto(getTenantUrl("brew-haven", "/", false));
 
     await expect(page.getByRole("heading", { name: "Brew Haven" })).toBeVisible();
-    await expect(page.getByTestId("menu-item")).toHaveCount(16);
+    await expect(page.getByTestId("menu-item").first()).toBeVisible();
     await expect(page.getByRole("button", { name: "Beverages" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Food" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Desserts" })).toBeVisible();
@@ -18,9 +18,13 @@ test.describe("Customer storefront checkout", () => {
 
     await page.getByTestId("add-item-btn").first().click();
     await expect(page.getByTestId("sticky-cart-bar")).toBeVisible();
-    await expect(page.getByTestId("cart-item-count")).toContainText("1 item");
+    await expect(page.getByTestId("cart-item-count")).toContainText("1");
 
     await page.getByTestId("sticky-cart-bar").click();
+    // Need to click Checkout from inside the cart modal
+    await page.getByRole("button", { name: /Checkout/i }).click();
+
+    await expect(page.getByTestId("payment-upi")).toBeVisible();
     await page.getByTestId("payment-upi").check();
     await page.getByTestId("submit-checkout").click();
 

@@ -19,6 +19,22 @@ export async function create(data: Prisma.UserCreateInput): Promise<User> {
   });
 }
 
+/** Self-serve customer registration — creates a CUSTOMER user. */
+export async function createCustomerUser(params: {
+  email: string;
+  name?: string | null;
+  hashedPassword: string;
+}): Promise<User> {
+  return db.user.create({
+    data: {
+      email: params.email,
+      name: params.name ?? null,
+      role: "CUSTOMER",
+      password: params.hashedPassword,
+    },
+  });
+}
+
 /**
  * Create or promote a cafe owner account. If the email already exists the user
  * is promoted to OWNER of this cafe (and optionally given a fresh password);

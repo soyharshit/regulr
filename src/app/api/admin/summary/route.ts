@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { requireSuperadmin } from "@/lib/apiAuth";
 
 const MONTHLY_PLAN_AMOUNT = 500000;
 
@@ -21,6 +22,9 @@ function timeAgo(date: Date | null) {
 }
 
 export async function GET() {
+  const auth = await requireSuperadmin();
+  if ("error" in auth) return auth.error;
+
   const sevenDaysAgo = startOfDaysAgo(7);
   const thirtyDaysAgo = startOfDaysAgo(30);
 

@@ -13,15 +13,19 @@ export const viewport: Viewport = {
   themeColor: "#FF6B4A",
 };
 
+import { ThemeProvider } from "@/components/ThemeProvider";
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className="font-sans antialiased text-ink bg-bg">
-        {children}
+    <html lang="en" suppressHydrationWarning>
+      <body className="font-sans antialiased text-ink bg-bg dark:bg-slate-950 dark:text-slate-100">
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+            {children}
+        </ThemeProvider>
       </body>
     </html>
   );

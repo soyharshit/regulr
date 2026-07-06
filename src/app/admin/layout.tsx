@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import {
   BarChart3,
   Store,
@@ -172,6 +173,10 @@ export default function AdminLayout({
                 <LogOut size={16} />
               </button>
             )}
+          </div>
+          
+          <div className={`mt-2 flex items-center ${collapsed ? 'lg:justify-center' : 'justify-end'}`}>
+             <ThemeToggle />
           </div>
         </div>
       </aside>

@@ -7,11 +7,19 @@ export interface Coupon {
   maxUses?: number;
 }
 
+export interface Reward {
+  id: string;
+  title: string;
+  cost: number; // points required
+  description?: string;
+}
+
 export interface GrowthSettings {
   loyaltyEnabled: boolean;
   pointsPerRupee: number;
   streakMilestones: number[];
   coupons: Coupon[];
+  rewards: Reward[];
 }
 
 const DEFAULT_SETTINGS: GrowthSettings = {
@@ -19,6 +27,7 @@ const DEFAULT_SETTINGS: GrowthSettings = {
   pointsPerRupee: 1,
   streakMilestones: [3, 7, 14, 30],
   coupons: [{ code: "WELCOME10", discountPercent: 10, maxUses: 500 }],
+  rewards: [],
 };
 
 function parse(raw: {
@@ -26,12 +35,14 @@ function parse(raw: {
   pointsPerRupee: number;
   streakMilestones: string;
   coupons: string;
+  rewards?: string;
 }): GrowthSettings {
   return {
     loyaltyEnabled: raw.loyaltyEnabled,
     pointsPerRupee: raw.pointsPerRupee,
     streakMilestones: JSON.parse(raw.streakMilestones || "[]"),
     coupons: JSON.parse(raw.coupons || "[]"),
+    rewards: JSON.parse(raw.rewards || "[]"),
   };
 }
 
@@ -51,23 +62,21 @@ export async function upsert(
     pointsPerRupee: settings.pointsPerRupee ?? current.pointsPerRupee,
     streakMilestones: settings.streakMilestones ?? current.streakMilestones,
     coupons: settings.coupons ?? current.coupons,
+    rewards: settings.rewards ?? current.rewards,
+  };
+
+  const payload = {
+    loyaltyEnabled: merged.loyaltyEnabled,
+    pointsPerRupee: merged.pointsPerRupee,
+    streakMilestones: JSON.stringify(merged.streakMilestones),
+    coupons: JSON.stringify(merged.coupons),
+    rewards: JSON.stringify(merged.rewards),
   };
 
   await db.cafeSettings.upsert({
     where: { cafeId },
-    update: {
-      loyaltyEnabled: merged.loyaltyEnabled,
-      pointsPerRupee: merged.pointsPerRupee,
-      streakMilestones: JSON.stringify(merged.streakMilestones),
-      coupons: JSON.stringify(merged.coupons),
-    },
-    create: {
-      cafeId,
-      loyaltyEnabled: merged.loyaltyEnabled,
-      pointsPerRupee: merged.pointsPerRupee,
-      streakMilestones: JSON.stringify(merged.streakMilestones),
-      coupons: JSON.stringify(merged.coupons),
-    },
+    update: payload,
+    create: { cafeId, ...payload },
   });
 
   return merged;

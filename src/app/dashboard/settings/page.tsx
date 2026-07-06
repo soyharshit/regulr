@@ -1,7 +1,78 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Store, Globe, QrCode, Download } from 'lucide-react';
+import { Store, Globe, QrCode, Download, Lock } from 'lucide-react';
+
+function ChangePassword() {
+  const [current, setCurrent] = useState('');
+  const [next, setNext] = useState('');
+  const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setMsg(null);
+    try {
+      const res = await fetch('/api/account/password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword: current, newPassword: next }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setMsg({ text: data.error || 'Could not change password', ok: false });
+      } else {
+        setMsg({ text: 'Password updated', ok: true });
+        setCurrent('');
+        setNext('');
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="rounded-card bg-white p-5 shadow-card space-y-4">
+      <div className="flex items-center gap-2.5">
+        <div className="w-9 h-9 rounded-control bg-bg-subtle flex items-center justify-center">
+          <Lock size={18} className="text-ink-2" />
+        </div>
+        <h2 className="font-display font-bold text-base text-ink">Change Password</h2>
+      </div>
+      <form onSubmit={submit} className="space-y-3">
+        <input
+          type="password"
+          value={current}
+          onChange={(e) => setCurrent(e.target.value)}
+          placeholder="Current password"
+          required
+          className="w-full px-3 py-2 rounded-control border border-border text-sm"
+        />
+        <input
+          type="password"
+          value={next}
+          onChange={(e) => setNext(e.target.value)}
+          placeholder="New password (min 6 chars)"
+          required
+          className="w-full px-3 py-2 rounded-control border border-border text-sm"
+        />
+        <div className="flex items-center gap-3">
+          <button
+            type="submit"
+            disabled={busy}
+            className="px-5 py-2 rounded-control bg-ink text-white font-semibold text-sm disabled:opacity-50"
+          >
+            {busy ? 'Saving…' : 'Update password'}
+          </button>
+          {msg && (
+            <span className={`text-sm font-medium ${msg.ok ? 'text-success' : 'text-error'}`}>{msg.text}</span>
+          )}
+        </div>
+      </form>
+    </div>
+  );
+}
 
 interface CafeInfo {
   id: string;
@@ -156,6 +227,8 @@ export default function SettingsPage() {
               <Download size={15} /> Download QR pack
             </a>
           </div>
+
+          <ChangePassword />
         </>
       )}
     </div>

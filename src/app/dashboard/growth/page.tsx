@@ -10,11 +10,19 @@ interface Coupon {
   maxUses?: number;
 }
 
+interface Reward {
+  id: string;
+  title: string;
+  cost: number;
+  description?: string;
+}
+
 interface GrowthSettings {
   loyaltyEnabled: boolean;
   pointsPerRupee: number;
   streakMilestones: number[];
   coupons: Coupon[];
+  rewards: Reward[];
 }
 
 const DEFAULT_SETTINGS: GrowthSettings = {
@@ -22,6 +30,7 @@ const DEFAULT_SETTINGS: GrowthSettings = {
   pointsPerRupee: 1,
   streakMilestones: [3, 7, 14, 30],
   coupons: [{ code: 'WELCOME10', discountPercent: 10, maxUses: 500 }],
+  rewards: [],
 };
 
 interface ReferralStats {
@@ -40,12 +49,16 @@ export default function GrowthSettingsPage() {
   const [newDiscount, setNewDiscount] = useState('10');
   const [newDiscountType, setNewDiscountType] = useState<'percent' | 'flat'>('percent');
   const [referralStats, setReferralStats] = useState<ReferralStats | null>(null);
+  const [newRewardTitle, setNewRewardTitle] = useState('');
+  const [newRewardCost, setNewRewardCost] = useState('100');
 
   useEffect(() => {
     fetch('/api/growth')
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
-        if (d && Array.isArray(d.coupons)) setSettings(d);
+        if (d && Array.isArray(d.coupons)) {
+          setSettings({ ...d, rewards: Array.isArray(d.rewards) ? d.rewards : [] });
+        }
       })
       .catch(() => {});
 
@@ -74,6 +87,23 @@ export default function GrowthSettingsPage() {
     }
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
+  };
+
+  const addReward = () => {
+    const title = newRewardTitle.trim();
+    const cost = Math.max(1, Math.round(Number(newRewardCost)) || 0);
+    if (!title || !cost) return;
+    const reward: Reward = { id: `rw_${Date.now()}`, title, cost };
+    const next = { ...settings, rewards: [...settings.rewards, reward] };
+    setSettings(next);
+    save(next);
+    setNewRewardTitle('');
+  };
+
+  const removeReward = (id: string) => {
+    const next = { ...settings, rewards: settings.rewards.filter((r) => r.id !== id) };
+    setSettings(next);
+    save(next);
   };
 
   const addCoupon = () => {
@@ -193,6 +223,65 @@ export default function GrowthSettingsPage() {
             onClick={addCoupon}
             className="p-2 rounded-control bg-primary text-white hover:bg-primary-hover"
             aria-label="Add coupon"
+          >
+            <Plus size={14} />
+          </button>
+        </div>
+      </div>
+
+      {/* Rewards store */}
+      <div className="rounded-card bg-white p-4 shadow-card space-y-3">
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-control bg-primary-soft flex items-center justify-center">
+            <Gift size={16} className="text-primary" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-ink">Rewards store</p>
+            <p className="text-xs text-ink-3">Let customers redeem points for perks — the reason they come back</p>
+          </div>
+        </div>
+        {settings.rewards.length === 0 && (
+          <p className="text-xs text-ink-3">No rewards yet — add one (e.g. “Free coffee” for 200 pts).</p>
+        )}
+        <div className="space-y-2">
+          {settings.rewards.map((r) => (
+            <div key={r.id} className="flex items-center justify-between rounded-control bg-bg-subtle border border-border px-3 py-2">
+              <div>
+                <span className="text-sm font-medium text-ink">{r.title}</span>
+                <span className="text-xs text-primary font-semibold ml-2">{r.cost} pts</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => removeReward(r.id)}
+                className="text-ink-3 hover:text-error transition-colors"
+                aria-label={`Remove ${r.title}`}
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
+        <div className="flex items-center gap-2 pt-2 border-t border-border">
+          <input
+            type="text"
+            value={newRewardTitle}
+            onChange={(e) => setNewRewardTitle(e.target.value)}
+            placeholder="Reward (e.g. Free cookie)"
+            className="flex-1 min-w-0 px-3 py-2 rounded-control border border-border text-sm"
+          />
+          <input
+            type="number"
+            value={newRewardCost}
+            onChange={(e) => setNewRewardCost(e.target.value)}
+            className="w-20 px-2 py-2 rounded-control border border-border text-sm"
+            aria-label="Reward cost in points"
+          />
+          <span className="text-xs text-ink-3">pts</span>
+          <button
+            type="button"
+            onClick={addReward}
+            className="p-2 rounded-control bg-primary text-white hover:bg-primary-hover"
+            aria-label="Add reward"
           >
             <Plus size={14} />
           </button>

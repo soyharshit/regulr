@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -17,11 +18,13 @@ import {
   Menu,
   X,
   LogOut,
+  ChefHat,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
   { label: 'Dashboard', icon: LayoutDashboard, href: '/dashboard', badge: null },
   { label: 'Orders', icon: ShoppingBag, href: '/dashboard/orders', badge: 3 },
+  { label: 'KDS', icon: ChefHat, href: '/dashboard/kds', badge: null },
   { label: 'Menu', icon: UtensilsCrossed, href: '/dashboard/menu', badge: null },
   { label: 'Growth', icon: Rocket, href: '/dashboard/growth', badge: null },
   { label: 'Customers', icon: Users, href: '/dashboard/customers', badge: null },
@@ -162,6 +165,12 @@ export default function DashboardLayout({
             <LogOut size={18} />
             {!collapsed && <span>Sign Out</span>}
           </button>
+
+          {/* Theme Toggle */}
+          <div className={`flex w-full items-center px-3 py-2 ${collapsed ? 'justify-center' : 'justify-between'}`}>
+            {!collapsed && <span className="text-sm text-ink-2 font-medium">Theme</span>}
+            <ThemeToggle />
+          </div>
         </div>
       </aside>
 

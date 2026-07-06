@@ -21,6 +21,14 @@ export function middleware(request: NextRequest) {
     subdomain = hostname.replace(".localhost", "");
   }
 
+  // Shared surfaces resolve to the same routes on EVERY host (root or a cafe
+  // subdomain). Without this, /auth/signin on brew-haven.regulr.in gets
+  // rewritten to /store/brew-haven/auth/signin and 404s, so a customer can
+  // never reach the sign-in form from the storefront.
+  if (/^\/(auth)(\/|$)/.test(url.pathname)) {
+    return NextResponse.next();
+  }
+
   const tenant = cafeOverride || subdomain;
 
   // Root domain or www (no tenant subdomain).

@@ -22,12 +22,58 @@ interface OrderItem {
 interface Order {
   id: string;
   status: string;
+  customerId: string | null;
   subtotalAmount: number;
   discountAmount: number;
   couponCode: string | null;
   totalAmount: number;
   pointsEarned: number;
+  bonusPoints: number;
+  scratchedAt: string | Date | null;
   orderItems: OrderItem[];
+}
+
+function ScratchCard({ orderId, initialBonus, initialScratched }: { orderId: string; initialBonus: number; initialScratched: boolean }) {
+  const [revealed, setRevealed] = useState(initialScratched);
+  const [bonus, setBonus] = useState(initialScratched ? initialBonus : 0);
+  const [loading, setLoading] = useState(false);
+
+  const reveal = async () => {
+    if (revealed || loading) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/orders/${orderId}/scratch`, { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        setBonus(data.bonus);
+        setRevealed(true);
+        confetti({ particleCount: 140, spread: 90, origin: { y: 0.6 } });
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="mt-4 rounded-card border-2 border-dashed border-primary/40 bg-primary-soft p-4 text-center">
+      <p className="text-xs font-semibold text-primary uppercase tracking-wide mb-2">Surprise scratch card 🎁</p>
+      {revealed ? (
+        <div className="animate-in zoom-in-95">
+          <p className="text-3xl font-bold text-primary">+{bonus}</p>
+          <p className="text-xs text-ink-2 mt-0.5">bonus points added — see you next time!</p>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={reveal}
+          disabled={loading}
+          className="w-full py-3 rounded-control gradient-coral text-white font-bold text-sm press-scale disabled:opacity-60"
+        >
+          {loading ? 'Revealing…' : 'Tap to scratch & win bonus points'}
+        </button>
+      )}
+    </div>
+  );
 }
 
 function formatRupee(paise: number): string {
@@ -41,7 +87,8 @@ export default function OrderTrackerClient({ cafe, order }: { cafe: { name: stri
   const [pointsEarned, setPointsEarned] = useState(order.pointsEarned);
 
   useEffect(() => {
-    if (status === 'COMPLETED') return;
+    // Stop polling on any terminal state.
+    if (status === 'COMPLETED' || status === 'CANCELLED') return;
 
     const interval = setInterval(async () => {
       try {
@@ -81,6 +128,18 @@ export default function OrderTrackerClient({ cafe, order }: { cafe: { name: stri
                 <p className="text-xs opacity-90">You earned</p>
                 <p className="text-4xl font-bold my-1">{pointsEarned}</p>
                 <p className="text-xs font-semibold uppercase tracking-wider">Loyalty points</p>
+              </div>
+              {order.customerId && (
+                <ScratchCard
+                  orderId={order.id}
+                  initialBonus={order.bonusPoints}
+                  initialScratched={!!order.scratchedAt}
+                />
+              )}
+              <div className="mt-4">
+                <a href={`/store/${cafe.slug}/rewards`} className="text-sm font-semibold text-primary">
+                  Redeem points for rewards →
+                </a>
               </div>
             </div>
           ) : (

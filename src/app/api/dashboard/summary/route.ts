@@ -93,6 +93,20 @@ export async function GET(request: NextRequest) {
     revenue: amount / 100,
   }));
 
+  const heatmapCounts = new Map<string, number>();
+  for (const order of chartOrders) {
+    const day = order.createdAt.getDay();
+    const hour = order.createdAt.getHours();
+    const key = `${day}-${hour}`;
+    heatmapCounts.set(key, (heatmapCounts.get(key) || 0) + 1);
+  }
+  const heatmapData = [];
+  for (let d = 0; d < 7; d++) {
+    for (let h = 0; h < 24; h++) {
+      heatmapData.push({ day: d, hour: h, count: heatmapCounts.get(`${d}-${h}`) || 0 });
+    }
+  }
+
   const isImpersonating = session?.user && (session.user as { role?: string }).role === "SUPERADMIN";
 
   return NextResponse.json({
@@ -123,5 +137,6 @@ export async function GET(request: NextRequest) {
       percent: Math.round((item.count / maxTopItemCount) * 100),
     })),
     chartData,
+    heatmapData,
   });
 }

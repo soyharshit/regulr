@@ -7,6 +7,7 @@ import * as customerRepo from '@/lib/repositories/customer';
 import * as cafeSettingsRepo from '@/lib/repositories/cafeSettings';
 import { recordVisitForStreak, tierForPoints, REFERRAL_REFERRER_BONUS, REFERRAL_REFERRED_BONUS } from '@/lib/loyalty';
 import * as referralRepo from '@/lib/repositories/referral';
+import { canAccessOrder } from '@/lib/apiAuth';
 
 const VALID_STATUSES = ['PENDING', 'PREPARING', 'READY', 'COMPLETED', 'CANCELLED'];
 
@@ -15,6 +16,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ ord
   try {
     const order = await getByIdPublic(orderId);
     if (!order) return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+    if (!(await canAccessOrder(order))) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
     return NextResponse.json({ status: order.status, pointsEarned: order.pointsEarned });
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -43,12 +47,22 @@ export async function POST(request: Request, { params }: { params: Promise<{ ord
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
 
-    const wasCompleted = existing.status === 'COMPLETED';
-    await updateStatus(cafeId, orderId, status);
+    // For the COMPLETED transition, flip the status atomically so the award
+    // block below runs EXACTLY ONCE even if two requests race.
+    let justCompleted = false;
+    if (status === 'COMPLETED') {
+      const res = await db.order.updateMany({
+        where: { id: orderId, cafeId, status: { not: 'COMPLETED' } },
+        data: { status: 'COMPLETED' },
+      });
+      justCompleted = res.count === 1;
+    } else {
+      await updateStatus(cafeId, orderId, status);
+    }
 
     // Award loyalty points / streak / referral bonus exactly once, on the
     // PENDING/PREPARING/READY -> COMPLETED transition.
-    if (status === 'COMPLETED' && !wasCompleted && existing.customerId) {
+    if (justCompleted && existing.customerId) {
       const settings = await cafeSettingsRepo.getByCafeId(cafeId);
       const pointsEarned = settings.loyaltyEnabled
         ? Math.floor((existing.totalAmount / 100) * settings.pointsPerRupee)
@@ -63,11 +77,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ ord
           todayIso
         );
 
+        // Hitting a streak milestone pays a bonus — a strong reason to keep the
+        // streak alive (5 pts per streak-day of the milestone reached).
+        const streakBonus = settings.streakMilestones.includes(streakCount) ? streakCount * 5 : 0;
+        const totalAward = pointsEarned + streakBonus;
+
         await db.customer.update({
           where: { id: customer.id },
           data: {
-            points: customer.points + pointsEarned,
-            tier: tierForPoints(customer.points + pointsEarned),
+            points: customer.points + totalAward,
+            tier: tierForPoints(customer.points + totalAward),
             streakCalendar,
             streakCount,
           },
@@ -82,11 +101,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ ord
           const referral = await db.referral.findUnique({ where: { referredId: customer.id } });
           if (referral && referral.status === 'PENDING' && referral.cafeId === cafeId) {
             await referralRepo.complete(cafeId, referral.id, REFERRAL_REFERRER_BONUS);
-            await customerRepo.updatePoints(
-              cafeId,
-              customer.id,
-              customer.points + pointsEarned + REFERRAL_REFERRED_BONUS
-            );
+            // Increment (not overwrite) so the referred bonus stacks on the
+            // points/streak already awarded above and keeps tier in sync.
+            const bonused = await db.customer.update({
+              where: { id: customer.id },
+              data: { points: { increment: REFERRAL_REFERRED_BONUS } },
+            });
+            await db.customer.update({
+              where: { id: customer.id },
+              data: { tier: tierForPoints(bonused.points) },
+            });
           }
         }
       }

@@ -1,4 +1,4 @@
-// PRODUCTION schema (Postgres) — used by the Vercel build via `--schema prisma/schema.postgres.prisma`.
+// PRODUCTION schema (Postgres) — used by the Vercel build via --schema prisma/schema.postgres.prisma.
 // KEEP THE MODELS IDENTICAL to prisma/schema.prisma (local SQLite) — only the datasource provider differs.
 
 generator client {
@@ -21,7 +21,8 @@ model Cafe {
   customers   Customer[]
   referrals   Referral[]
   settings    CafeSettings?
-  staff       User[]        @relation("CafeStaff")
+  staff       User[]             @relation("CafeStaff")
+  redemptions RewardRedemption[]
 }
 
 model CafeSettings {
@@ -31,6 +32,7 @@ model CafeSettings {
   pointsPerRupee   Float    @default(1)
   streakMilestones String   @default("[3,7,14,30]") // JSON array of numbers
   coupons          String   @default("[]") // JSON array of { code, discountPercent?, discountPaise?, maxUses? }
+  rewards          String   @default("[]") // JSON array of { id, title, cost, description? } redeemable with points
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
@@ -66,6 +68,7 @@ model Customer {
   orders          Order[]
   referralsMade   Referral[] @relation("ReferrerRelation")
   referredBy      Referral?  @relation("ReferredRelation")
+  redemptions     RewardRedemption[]
 
   @@unique([cafeId, userId])
 }
@@ -96,6 +99,8 @@ model Order {
   couponCode      String?
   pointsRedeemed  Int         @default(0)
   pointsEarned    Int         @default(0) // awarded on completion
+  bonusPoints     Int         @default(0) // scratch-card surprise bonus, awarded once
+  scratchedAt     DateTime?   // when the customer revealed the scratch card
   totalAmount     Int         // in paise, final amount charged
   status          String      @default("PENDING") // PENDING, PREPARING, READY, COMPLETED, CANCELLED
   paymentMethod   String      @default("CASH") // CASH, UPI, RAZORPAY
@@ -133,6 +138,21 @@ model Referral {
   cafe          Cafe     @relation(fields: [cafeId], references: [id], onDelete: Cascade)
   referrer      Customer @relation("ReferrerRelation", fields: [referrerId], references: [id], onDelete: Cascade)
   referred      Customer @relation("ReferredRelation", fields: [referredId], references: [id], onDelete: Cascade)
+}
+
+model RewardRedemption {
+  id          String   @id @default(uuid())
+  cafeId      String
+  customerId  String
+  rewardTitle String
+  cost        Int      // points spent
+  code        String   @unique // voucher code shown to the customer / verified by staff
+  status      String   @default("ACTIVE") // ACTIVE, USED, EXPIRED
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  cafe        Cafe     @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
 }
 
 model AuditLog {

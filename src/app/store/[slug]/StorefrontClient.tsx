@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ShoppingCart, Flame, Gift, Copy, Check, Minus, Plus, LogIn, Utensils, Receipt } from 'lucide-react';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 interface Cafe {
   id: string;
@@ -178,7 +179,10 @@ export default function StorefrontClient({
               {cafe.name.slice(0, 2).toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
-              <h1 className="font-display font-bold text-xl text-ink leading-tight truncate">{cafe.name}</h1>
+              <div className="flex items-center justify-between">
+                <h1 className="font-display font-bold text-xl text-ink leading-tight truncate">{cafe.name}</h1>
+                <ThemeToggle />
+              </div>
               <div className="flex items-center gap-2 mt-1.5">
                 <span className="status-dot status-dot--open" />
                 <span className="text-sm text-ink-2">Open now</span>
@@ -197,39 +201,58 @@ export default function StorefrontClient({
           </div>
         </div>
 
-        {/* My orders (signed-in customers) */}
+        {/* Rewards + orders (signed-in customers) */}
         {isSignedIn && (
-          <a
-            href={`/store/${cafe.slug}/orders`}
-            className="rounded-card bg-white shadow-card p-3.5 mt-3 flex items-center justify-between hover:bg-bg-subtle transition-colors"
-          >
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-control bg-bg-subtle flex items-center justify-center">
+          <div className="grid grid-cols-2 gap-2 mt-3">
+            <a
+              href={`/store/${cafe.slug}/rewards`}
+              className="rounded-card bg-white shadow-card p-3.5 flex items-center gap-2.5 hover:bg-bg-subtle transition-colors"
+            >
+              <div className="w-9 h-9 rounded-control bg-primary-soft flex items-center justify-center shrink-0">
+                <Gift size={16} className="text-primary" />
+              </div>
+              <span className="text-sm font-semibold text-ink">Rewards</span>
+            </a>
+            <a
+              href={`/store/${cafe.slug}/orders`}
+              className="rounded-card bg-white shadow-card p-3.5 flex items-center gap-2.5 hover:bg-bg-subtle transition-colors"
+            >
+              <div className="w-9 h-9 rounded-control bg-bg-subtle flex items-center justify-center shrink-0">
                 <Receipt size={16} className="text-ink-2" />
               </div>
               <span className="text-sm font-semibold text-ink">My orders</span>
-            </div>
-            <span className="text-ink-3 text-sm">→</span>
-          </a>
+            </a>
+          </div>
         )}
 
         {/* Loyalty */}
         <div className="rounded-card bg-white shadow-card p-4 mt-3">
           {loyalty.isGuest ? (
-            <a
-              href={`/auth/signin?next=${encodeURIComponent(`/store/${cafe.slug}`)}`}
-              className="flex items-center justify-between gap-3"
-            >
+            <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-control bg-primary-soft flex items-center justify-center">
                   <LogIn size={16} className="text-primary" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-ink">Sign in to earn rewards</p>
-                  <p className="text-xs text-ink-3">Points, streaks, and referral bonuses</p>
+                  <p className="text-sm font-semibold text-ink">Join to earn rewards</p>
+                  <p className="text-xs text-ink-3">Points, streaks & referral bonuses</p>
                 </div>
               </div>
-            </a>
+              <div className="flex items-center gap-2 shrink-0">
+                <a
+                  href={`/auth/signup?next=${encodeURIComponent(`/store/${cafe.slug}`)}`}
+                  className="px-3 py-1.5 rounded-control bg-primary text-white text-xs font-semibold"
+                >
+                  Sign up
+                </a>
+                <a
+                  href={`/auth/signin?next=${encodeURIComponent(`/store/${cafe.slug}`)}`}
+                  className="px-3 py-1.5 rounded-control border border-border text-ink-2 text-xs font-semibold"
+                >
+                  Log in
+                </a>
+              </div>
+            </div>
           ) : (
             <div className="space-y-2.5">
               <div className="flex items-center justify-between">
@@ -330,7 +353,7 @@ export default function StorefrontClient({
             .map((item) => {
               const qty = quantityFor(item.id);
               return (
-                <div key={item.id} className="bg-white rounded-card shadow-card p-4 flex items-center justify-between gap-3">
+                <div key={item.id} data-testid="menu-item" className="bg-white rounded-card shadow-card p-4 flex items-center justify-between gap-3">
                   {item.imageUrl && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -350,6 +373,7 @@ export default function StorefrontClient({
                     <button
                       type="button"
                       onClick={() => addToCart(item)}
+                      data-testid="add-item-btn"
                       disabled={!item.isAvailable}
                       className="shrink-0 px-4 py-2 rounded-control bg-primary-soft text-primary font-semibold text-sm hover:bg-primary hover:text-white transition-colors disabled:opacity-40"
                     >
@@ -384,10 +408,10 @@ export default function StorefrontClient({
 
       {/* Sticky cart bar */}
       {cartCount > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-border shadow-pop flex justify-center z-50">
+        <div data-testid="sticky-cart-bar" className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-border shadow-pop flex justify-center z-50">
           <div className="max-w-md w-full flex justify-between items-center">
-            <div>
-              <p className="text-xs text-ink-3">{cartCount} items</p>
+            <div className="relative">
+              <span data-testid="cart-item-count" className="text-xs text-ink-3">{cartCount} items</span>
               <p className="font-bold text-lg text-ink">{formatRupee(cartTotal)}</p>
             </div>
             <button

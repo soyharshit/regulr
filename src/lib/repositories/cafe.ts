@@ -39,11 +39,31 @@ export async function resolveCafeForSession(session: any, requestSlug?: string |
     return null;
   }
 
+  // Customers are scoped to the cafe(s) they have a loyalty profile at. Honor an
+  // explicit slug (deep links / off-subdomain), else their (primary) cafe.
+  if (user?.role === "CUSTOMER" && user.id) {
+    if (requestSlug) {
+      const bySlug = await db.cafe.findUnique({ where: { slug: requestSlug } });
+      if (bySlug) return bySlug;
+    }
+    const profile = await db.customer.findFirst({
+      where: { userId: user.id },
+      include: { cafe: true },
+      orderBy: { createdAt: "asc" },
+    });
+    return profile?.cafe ?? null;
+  }
+
   // Superadmin can act on any cafe: the cafe they're impersonating, else the
-  // explicitly requested slug, else the first cafe.
+  // explicitly requested slug, else the first cafe. Impersonation state is read
+  // ONLY from impersonation audit rows (scoped + honoring END) so unrelated
+  // admin actions (onboard/rename/reset) can't silently clobber the session.
   if (user?.role === "SUPERADMIN") {
     const lastImpersonate = await db.auditLog.findFirst({
-      where: { actorId: user.id || "unknown" },
+      where: {
+        actorId: user.id || "unknown",
+        action: { in: ["IMPERSONATE_START", "IMPERSONATE_END"] },
+      },
       orderBy: { createdAt: "desc" },
     });
     if (lastImpersonate?.action === "IMPERSONATE_START" && lastImpersonate.targetId) {

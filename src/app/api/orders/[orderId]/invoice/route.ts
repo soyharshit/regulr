@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { renderToBuffer, Document, Page, View, Text, StyleSheet } from "@react-pdf/renderer";
 import React from "react";
+import { canAccessOrder } from "@/lib/apiAuth";
 
 const styles = StyleSheet.create({
   page: { padding: 30, fontSize: 12, color: "#1A1A2E", fontFamily: "Helvetica" },
@@ -28,6 +29,10 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 
   if (!order) {
     return NextResponse.json({ error: "Order not found" }, { status: 404 });
+  }
+
+  if (!(await canAccessOrder(order))) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
   const InvoiceDocument = React.createElement(

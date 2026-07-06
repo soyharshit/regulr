@@ -135,12 +135,14 @@ function TierBadge({ tier }: { tier: string }) {
 
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
-    PAID: 'bg-success-soft text-success',
+    PENDING: 'bg-bg-subtle text-ink-2 border border-border',
     PREPARING: 'bg-amber-soft text-amber',
     READY: 'bg-info-soft text-info',
+    COMPLETED: 'bg-success-soft text-success',
+    CANCELLED: 'bg-error-soft text-error',
   };
   return (
-    <span className={`px-2 py-0.5 rounded-pill text-[11px] font-semibold tracking-wide ${styles[status] || ''}`}>
+    <span className={`px-2 py-0.5 rounded-pill text-[11px] font-semibold tracking-wide ${styles[status] || 'bg-bg-subtle text-ink-3'}`}>
       {status}
     </span>
   );
@@ -154,14 +156,15 @@ function TypePill({ type }: { type: string }) {
   );
 }
 
-function RevenueChart() {
+function RevenueChart({ series }: { series?: { y: number }[] }) {
   const W = 560;
   const H = 160;
   const padX = 0;
   const padY = 8;
 
-  const points = CHART_POINTS.map((p, i) => ({
-    x: padX + (i / (CHART_POINTS.length - 1)) * (W - padX * 2),
+  const src = series && series.length > 1 ? series : CHART_POINTS;
+  const points = src.map((p, i) => ({
+    x: padX + (i / (src.length - 1)) * (W - padX * 2),
     y: padY + (p.y / 80) * (H - padY * 2),
   }));
 
@@ -206,15 +209,15 @@ function RevenueChart() {
   );
 }
 
-function TopItemsChart() {
+function TopItemsChart({ items }: { items?: { name: string; count: number; percent: number }[] }) {
+  const src = items && items.length > 0 ? items : TOP_ITEMS;
   return (
     <div className="space-y-3">
-      {TOP_ITEMS.map((item) => {
-        const Icon = item.icon;
+      {src.map((item) => {
         return (
           <div key={item.name} className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-primary-soft flex items-center justify-center shrink-0">
-              <Icon size={16} className="text-primary" />
+              <Coffee size={16} className="text-primary" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between mb-1">
@@ -231,6 +234,51 @@ function TopItemsChart() {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function OrderVolumeHeatmap({ data }: { data: { day: number; hour: number; count: number }[] }) {
+  if (!data || data.length === 0) return null;
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const maxCount = Math.max(1, ...data.map((d) => d.count));
+
+  return (
+    <div className="w-full overflow-x-auto pb-2">
+      <div className="min-w-[500px]">
+        {/* X Axis: Hours */}
+        <div className="flex ml-8 text-[10px] text-ink-3 tabular-nums mb-1">
+          {Array.from({ length: 24 }).map((_, h) => (
+            <div key={h} className="flex-1 text-center">
+              {h % 2 === 0 ? `${h}` : ''}
+            </div>
+          ))}
+        </div>
+        
+        {/* Grid */}
+        <div className="space-y-1">
+          {days.map((dayLabel, d) => (
+            <div key={d} className="flex items-center">
+              <span className="w-8 text-[10px] text-ink-3 text-right pr-2">{dayLabel}</span>
+              <div className="flex-1 flex gap-1">
+                {Array.from({ length: 24 }).map((_, h) => {
+                  const cell = data.find((c) => c.day === d && c.hour === h);
+                  const count = cell?.count || 0;
+                  const opacity = count === 0 ? 0.05 : 0.2 + (count / maxCount) * 0.8;
+                  return (
+                    <div
+                      key={h}
+                      className="flex-1 aspect-square rounded-sm"
+                      style={{ backgroundColor: `rgba(255, 107, 74, ${opacity})` }}
+                      title={`${dayLabel} ${h}:00 - ${count} orders`}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -272,6 +320,15 @@ export default function DashboardPage() {
 
   const recentOrders = data?.recentOrders || RECENT_ORDERS;
   const cafeName = data?.cafe?.name || "Haku's Coffeehouse";
+
+  // Real chart data (falls back to the mock arrays inside the chart components).
+  const revenueSeries: { y: number }[] | undefined = (() => {
+    const cd = data?.chartData as { revenue: number }[] | undefined;
+    if (!cd || cd.length < 2) return undefined;
+    const max = Math.max(...cd.map((d) => d.revenue), 1);
+    return cd.map((d) => ({ y: (d.revenue / max) * 80 }));
+  })();
+  const topItems = data?.topItems as { name: string; count: number; percent: number }[] | undefined;
 
   return (
     <div className="min-h-full">
@@ -427,7 +484,7 @@ export default function DashboardPage() {
                 <ChevronDown size={14} />
               </button>
             </div>
-            <RevenueChart />
+            <RevenueChart series={revenueSeries} />
           </div>
 
           {/* Top items */}
@@ -438,8 +495,23 @@ export default function DashboardPage() {
                 <p className="text-xs text-ink-3 mt-0.5">Most ordered this week</p>
               </div>
             </div>
-            <TopItemsChart />
+            <TopItemsChart items={topItems} />
           </div>
+        </div>
+
+        {/* ─── Heatmap ─── */}
+        <div className="rounded-card bg-white p-5 shadow-card">
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h2 className="font-display font-bold text-base text-ink">Order Volume Heatmap</h2>
+                <p className="text-xs text-ink-3 mt-0.5">Peak ordering hours over this period</p>
+              </div>
+            </div>
+            {data?.heatmapData ? (
+                <OrderVolumeHeatmap data={data.heatmapData} />
+            ) : (
+                <div className="animate-pulse h-40 bg-bg-subtle rounded-card" />
+            )}
         </div>
 
         {/* ─── Live feed ─── */}

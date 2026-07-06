@@ -210,6 +210,7 @@ export default function CheckoutClient({ cafe }: { cafe: Cafe }) {
                   checked={paymentMethod === option.value}
                   onChange={() => setPaymentMethod(option.value)}
                   className="mr-3"
+                  data-testid={option.value === 'UPI' ? 'payment-upi' : undefined}
                 />
                 {option.label}
               </label>
@@ -223,6 +224,7 @@ export default function CheckoutClient({ cafe }: { cafe: Cafe }) {
           type="button"
           onClick={handleCheckout}
           disabled={loading}
+          data-testid="submit-checkout"
           className="w-full gradient-coral text-white font-bold py-4 px-6 rounded-control transition flex justify-center items-center press-scale disabled:opacity-50"
         >
           {loading ? <Loader2 className="animate-spin" size={20} /> : `Place order • ${formatRupee(preview.grandTotal)}`}
