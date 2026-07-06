@@ -1,6 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
+import { StreakCalendar } from '@/components/StreakCalendar';
+import { Pagination } from '@/components/Pagination';
 
 interface CustomerRow {
   id: string;
@@ -13,28 +15,50 @@ interface CustomerRow {
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<CustomerRow[]>([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState('');
   const [cafeId, setCafeId] = useState('');
   const [adjustId, setAdjustId] = useState<string | null>(null);
   const [adjustPoints, setAdjustPoints] = useState('');
+
+  const fetchCustomers = useCallback(async (p: number, q?: string) => {
+    try {
+      const params = new URLSearchParams({ page: String(p), limit: '10' });
+      if (q) params.set('search', q);
+      const res = await fetch(`/api/customers?${params}`);
+      if (!res.ok) return;
+      const d = await res.json();
+      if (Array.isArray(d)) {
+        setCustomers(d);
+        setTotalPages(1);
+      } else {
+        setCustomers(d.data || []);
+        setTotalPages(d.totalPages || 1);
+      }
+    } catch { /* ignore */ }
+  }, []);
 
   useEffect(() => {
     fetch('/api/dashboard/summary')
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (d?.cafe?.id) setCafeId(d.cafe.id);
-        return fetch('/api/customers');
+        return fetchCustomers(1);
       })
-      .then((r) => (r.ok ? r.json() : []))
-      .then((d) => setCustomers(Array.isArray(d) ? d : []))
       .catch(() => {});
-  }, []);
+  }, [fetchCustomers]);
 
-  const filtered = customers.filter(
-    (c) =>
-      (c.user.name || '').toLowerCase().includes(search.toLowerCase()) ||
-      c.user.email.toLowerCase().includes(search.toLowerCase())
-  );
+  const handleSearch = (val: string) => {
+    setSearch(val);
+    setPage(1);
+    fetchCustomers(1, val);
+  };
+
+  const handlePageChange = (p: number) => {
+    setPage(p);
+    fetchCustomers(p, search);
+  };
 
   const savePoints = async (customerId: string) => {
     await fetch('/api/customers', {
@@ -43,8 +67,7 @@ export default function CustomersPage() {
       body: JSON.stringify({ cafeId, customerId, points: Number(adjustPoints) }),
     });
     setAdjustId(null);
-    const res = await fetch('/api/customers');
-    setCustomers(await res.json());
+    fetchCustomers(page, search);
   };
 
   const triggerReward = async (customerId: string) => {
@@ -55,8 +78,7 @@ export default function CustomersPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ cafeId, customerId, points: customer.points + 50 }),
     });
-    const res = await fetch('/api/customers');
-    setCustomers(await res.json());
+    fetchCustomers(page, search);
   };
 
   return (
@@ -65,11 +87,11 @@ export default function CustomersPage() {
       <input
         placeholder="Search customers..."
         value={search}
-        onChange={(e) => setSearch(e.target.value)}
+        onChange={(e) => handleSearch(e.target.value)}
         className="w-full max-w-md px-4 py-2 rounded-control border border-border text-sm"
       />
       <div className="grid gap-3">
-        {filtered.map((c) => {
+        {customers.map((c) => {
           let streakDays: string[] = [];
           try {
             streakDays = JSON.parse(c.streakCalendar);
@@ -106,15 +128,25 @@ export default function CustomersPage() {
                   </button>
                 </div>
               </div>
-              <div className="flex gap-0.5 mt-3 flex-wrap">
-                {streakDays.slice(-14).map((day) => (
-                  <div
-                    key={day}
-                    className="w-3 h-3 rounded-sm bg-primary/70"
-                    title={day}
+              {streakDays.length > 0 ? (
+                <div className="mt-3">
+                  <StreakCalendar
+                    streakCalendar={streakDays}
+                    streakCount={c.streakCount}
+                    compact
                   />
-                ))}
-              </div>
+                </div>
+              ) : (
+                <div className="flex gap-0.5 mt-3">
+                  {streakDays.slice(-14).map((day) => (
+                    <div
+                      key={day}
+                      className="w-3 h-3 rounded-sm bg-primary/70"
+                      title={day}
+                    />
+                  ))}
+                </div>
+              )}
               {adjustId === c.id && (
                 <div className="mt-3 flex gap-2">
                   <input
@@ -132,6 +164,7 @@ export default function CustomersPage() {
           );
         })}
       </div>
+      <Pagination page={page} totalPages={totalPages} onPageChange={handlePageChange} />
     </div>
   );
 }

@@ -9,6 +9,8 @@ const COLUMNS = [
   { key: 'COMPLETED', label: 'Completed', testId: 'column-completed' },
 ] as const;
 
+const PAGE_SIZE = 15;
+
 interface OrderCard {
   id: string;
   status: string;
@@ -17,6 +19,12 @@ interface OrderCard {
   createdAt: string;
   customer?: { user?: { name?: string | null } };
   orderItems: { quantity: number; menuItem: { name: string } }[];
+}
+
+interface ColumnState {
+  orders: OrderCard[];
+  page: number;
+  totalPages: number;
 }
 
 function playNewOrderSound() {
@@ -38,41 +46,79 @@ function playNewOrderSound() {
 
 export default function KDSPage() {
   const [cafeId, setCafeId] = useState<string | null>(null);
-  const [orders, setOrders] = useState<OrderCard[]>([]);
+  const [columns, setColumns] = useState<Record<string, ColumnState>>({
+    PENDING: { orders: [], page: 1, totalPages: 1 },
+    PREPARING: { orders: [], page: 1, totalPages: 1 },
+    READY: { orders: [], page: 1, totalPages: 1 },
+    COMPLETED: { orders: [], page: 1, totalPages: 1 },
+  });
   const [loading, setLoading] = useState(true);
   const knownIds = useRef(new Set<string>());
 
-  const loadOrders = useCallback(async () => {
-    const res = await fetch('/api/dashboard/summary?range=today');
-    if (!res.ok) {
-      setLoading(false);
-      return;
-    }
-    const data = await res.json();
+  const fetchColumn = useCallback(async (status: string, page: number) => {
+    const res = await fetch(`/api/orders?status=${status}&page=${page}&limit=${PAGE_SIZE}`);
+    if (!res.ok) return { data: [], total: 0, totalPages: 1 };
+    const d = await res.json();
+    if (Array.isArray(d)) return { data: d, total: d.length, totalPages: 1 };
+    return d;
+  }, []);
+
+  const loadAllColumns = useCallback(async () => {
+    const summaryRes = await fetch('/api/dashboard/summary?range=today');
+    if (!summaryRes.ok) { setLoading(false); return; }
+    const data = await summaryRes.json();
     setCafeId(data.cafe.id);
 
-    const ordersRes = await fetch(`/api/orders?cafeId=${data.cafe.id}`);
-    if (!ordersRes.ok) return;
-    const list = (await ordersRes.json()) as OrderCard[];
+    const results = await Promise.all(
+      COLUMNS.map(async (col) => {
+        const res = await fetchColumn(col.key, 1);
+        return { key: col.key, ...res };
+      })
+    );
 
-    for (const order of list) {
-      if (order.status === 'PENDING' && !knownIds.current.has(order.id)) {
-        knownIds.current.add(order.id);
-        if (knownIds.current.size > 1) {
-          playNewOrderSound();
+    for (const r of results) {
+      if (r.key === 'PENDING') {
+        for (const order of r.data) {
+          if (!knownIds.current.has(order.id)) {
+            knownIds.current.add(order.id);
+            if (knownIds.current.size > 1) {
+              playNewOrderSound();
+            }
+          }
         }
       }
     }
 
-    setOrders(list.filter((o) => o.status !== 'CANCELLED'));
+    setColumns((prev) => {
+      const next = { ...prev };
+      for (const r of results) {
+        next[r.key] = { orders: r.data, page: 1, totalPages: r.totalPages };
+      }
+      return next;
+    });
     setLoading(false);
-  }, []);
+  }, [fetchColumn]);
 
   useEffect(() => {
-    loadOrders();
-    const timer = setInterval(loadOrders, 5000);
+    loadAllColumns();
+    const timer = setInterval(loadAllColumns, 5000);
     return () => clearInterval(timer);
-  }, [loadOrders]);
+  }, [loadAllColumns]);
+
+  const loadMore = async (status: string) => {
+    const col = columns[status];
+    if (col.page >= col.totalPages) return;
+    const next = col.page + 1;
+    const res = await fetchColumn(status, next);
+    setColumns((prev) => ({
+      ...prev,
+      [status]: {
+        orders: [...prev[status].orders, ...res.data],
+        page: next,
+        totalPages: res.totalPages,
+      },
+    }));
+  };
 
   const advance = async (orderId: string, status: string) => {
     if (!cafeId) return;
@@ -81,7 +127,7 @@ export default function KDSPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ cafeId, status }),
     });
-    loadOrders();
+    loadAllColumns();
   };
 
   const nextStatus = (current: string): string | null => {
@@ -116,7 +162,9 @@ export default function KDSPage() {
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 h-[calc(100vh-140px)]">
         {COLUMNS.map((col) => {
-          const colOrders = orders.filter((o) => o.status === col.key);
+          const colState = columns[col.key];
+          const colOrders = colState.orders;
+          const hasMore = colState.page < colState.totalPages;
           return (
             <div
               key={col.key}
@@ -153,7 +201,7 @@ export default function KDSPage() {
                             </div>
                         ))}
                       </div>
-                      
+
                       {next && (
                         <button
                           type="button"
@@ -170,6 +218,15 @@ export default function KDSPage() {
                     <div className="h-full flex flex-col items-center justify-center text-slate-500 pb-10">
                         <p className="font-medium">No orders</p>
                     </div>
+                )}
+                {hasMore && (
+                  <button
+                    type="button"
+                    onClick={() => loadMore(col.key)}
+                    className="w-full py-2 rounded-lg border border-slate-700 text-sm font-medium text-slate-400 hover:bg-slate-800 transition-colors"
+                  >
+                    Load more
+                  </button>
                 )}
               </div>
             </div>

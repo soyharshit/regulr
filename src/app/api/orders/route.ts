@@ -11,10 +11,25 @@ import { requireCafe } from '@/lib/apiAuth';
 const GST_RATE = 0.05;
 
 // Owner/staff order feed — scoped to the caller's own cafe (session-derived).
-export async function GET() {
+// Supports ?page=&limit=&status= for pagination. Without params returns all (backward compat).
+export async function GET(request: NextRequest) {
   const auth = await requireCafe();
   if ('error' in auth) return auth.error;
   try {
+    const url = request.nextUrl;
+    const page = url.searchParams.get('page');
+    const limit = url.searchParams.get('limit');
+    const status = url.searchParams.get('status');
+
+    if (page || limit || status) {
+      const result = await orderRepo.listPaginated(auth.cafe.id, {
+        page: page ? Number(page) : 1,
+        pageSize: limit ? Number(limit) : 20,
+        status: status || undefined,
+      });
+      return NextResponse.json(result);
+    }
+
     const orders = await orderRepo.list(auth.cafe.id);
     return NextResponse.json(orders);
   } catch {

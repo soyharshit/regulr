@@ -19,6 +19,7 @@ import {
   X,
   LogOut,
   ChefHat,
+  Palette,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -26,6 +27,7 @@ const NAV_ITEMS = [
   { label: 'Orders', icon: ShoppingBag, href: '/dashboard/orders', badge: 3 },
   { label: 'KDS', icon: ChefHat, href: '/dashboard/kds', badge: null },
   { label: 'Menu', icon: UtensilsCrossed, href: '/dashboard/menu', badge: null },
+  { label: 'Branding', icon: Palette, href: '/dashboard/branding', badge: null },
   { label: 'Growth', icon: Rocket, href: '/dashboard/growth', badge: null },
   { label: 'Customers', icon: Users, href: '/dashboard/customers', badge: null },
   { label: 'Billing', icon: Receipt, href: '/dashboard/billing', badge: null },

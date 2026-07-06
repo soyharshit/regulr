@@ -113,6 +113,31 @@ export async function POST(request: Request, { params }: { params: Promise<{ ord
             });
           }
         }
+
+        // Increment Fortune Box progress — every 5 orders unlocks a mystery reward.
+        const box = await db.fortuneBox.findUnique({
+          where: { cafeId_customerId: { cafeId, customerId: customer.id } },
+        });
+        if (box && !box.openedAt) {
+          const newProgress = box.progress + 1;
+          if (newProgress >= 5) {
+            // Weighted random reward: 70% common, 25% rare, 5% epic.
+            const rand = Math.random();
+            const type = rand < 0.05 ? "rare" : "common";
+            const value = type === "rare"
+              ? Math.floor(Math.random() * 26) + 25
+              : Math.floor(Math.random() * 21) + 5;
+            await db.fortuneBox.update({
+              where: { cafeId_customerId: { cafeId, customerId: customer.id } },
+              data: { progress: 0, openedAt: new Date(), reward: JSON.stringify({ type, value }) },
+            });
+          } else {
+            await db.fortuneBox.update({
+              where: { cafeId_customerId: { cafeId, customerId: customer.id } },
+              data: { progress: newProgress },
+            });
+          }
+        }
       }
 
       await db.order.update({ where: { id: orderId }, data: { pointsEarned } });

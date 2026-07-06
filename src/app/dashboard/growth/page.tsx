@@ -163,7 +163,24 @@ export default function GrowthSettingsPage() {
 
       <div className="rounded-card bg-white p-4 shadow-card space-y-2">
         <label className="text-sm font-medium text-ink">Streak milestones (days)</label>
-        <p className="text-xs text-ink-2 font-mono">{settings.streakMilestones.join(', ')}</p>
+        <p className="text-[11px] text-ink-3">Bonus points awarded when a customer hits these consecutive-day streaks.</p>
+        <input
+          type="text"
+          value={settings.streakMilestones.join(', ')}
+          onChange={(e) => {
+            const parsed = e.target.value
+              .split(',')
+              .map((s) => Number(s.trim()))
+              .filter((n) => Number.isFinite(n) && n > 0);
+            setSettings({ ...settings, streakMilestones: parsed });
+          }}
+          onBlur={() => save(settings)}
+          placeholder="3, 7, 14, 30"
+          className="w-full px-3 py-2 rounded-control border border-border text-sm font-mono"
+        />
+        <p className="text-[11px] text-ink-3">
+          Comma-separated day counts. Customers earn streakCount x 5 bonus points at each milestone.
+        </p>
       </div>
 
       <div className="rounded-card bg-white p-4 shadow-card space-y-3">

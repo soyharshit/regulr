@@ -12,19 +12,24 @@ datasource db {
 }
 
 model Cafe {
-  id          String        @id @default(uuid())
-  slug        String        @unique
-  name        String
-  isActive    Boolean       @default(true)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  menuItems   MenuItem[]
-  orders      Order[]
-  customers   Customer[]
-  referrals   Referral[]
-  settings    CafeSettings?
-  staff       User[]             @relation("CafeStaff")
-  redemptions RewardRedemption[]
+  id            String        @id @default(uuid())
+  slug          String        @unique
+  name          String
+  isActive      Boolean       @default(true)
+  brandColor    String?       // hex color for theming, e.g. "#4A2C23"
+  logoUrl       String?       // URL to cafe logo image
+  coverImageUrl String?       // URL to cover/banner image
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  menuItems     MenuItem[]
+  orders        Order[]
+  customers     Customer[]
+  referrals     Referral[]
+  settings      CafeSettings?
+  staff         User[]             @relation("CafeStaff")
+  redemptions   RewardRedemption[]
+  checkIns      CheckIn[]
+  fortuneBoxes  FortuneBox[]
 }
 
 model CafeSettings {
@@ -71,6 +76,8 @@ model Customer {
   referralsMade   Referral[] @relation("ReferrerRelation")
   referredBy      Referral?  @relation("ReferredRelation")
   redemptions     RewardRedemption[]
+  checkIns        CheckIn[]
+  fortuneBoxes    FortuneBox[]
 
   @@unique([cafeId, userId])
 }
@@ -81,6 +88,7 @@ model MenuItem {
   name        String
   description String?
   price       Int         // in paise
+  zomatoPrice Int?        // price in paise on Zomato/Swiggy (for price comparison)
   category    String      @default("beverages")
   isAvailable Boolean     @default(true)
   imageUrl    String?
@@ -164,4 +172,34 @@ model AuditLog {
   action    String   // e.g. "IMPERSONATE_START", "IMPERSONATE_END"
   metadata  String   @default("{}") // JSON string
   createdAt DateTime @default(now())
+}
+
+model CheckIn {
+  id         String   @id @default(uuid())
+  cafeId     String
+  customerId String
+  date       String   // ISO date "2026-07-06"
+  points     Int      // points earned that day
+  createdAt  DateTime @default(now())
+
+  cafe       Cafe     @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@unique([customerId, date])
+}
+
+model FortuneBox {
+  id         String   @id @default(uuid())
+  cafeId     String
+  customerId String
+  progress   Int      @default(0) // orders collected (0-5)
+  reward     String?  // JSON { type: "points"|"coupon", value: number } - revealed on open
+  openedAt   DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  cafe       Cafe     @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@unique([cafeId, customerId])
 }

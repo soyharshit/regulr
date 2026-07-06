@@ -6,6 +6,7 @@ interface MenuRow {
   id: string;
   name: string;
   price: number;
+  zomatoPrice: number | null;
   category: string;
   isAvailable: boolean;
   description: string | null;
@@ -16,7 +17,7 @@ export default function MenuManagementPage() {
   const [cafeId, setCafeId] = useState('');
   const [items, setItems] = useState<MenuRow[]>([]);
   const [importError, setImportError] = useState<string | null>(null);
-  const [form, setForm] = useState({ name: '', price: '', category: 'beverages', imageUrl: '' });
+  const [form, setForm] = useState({ name: '', price: '', category: 'beverages', imageUrl: '', zomatoPrice: '' });
 
   const load = useCallback(async () => {
     const summary = await fetch('/api/dashboard/summary');
@@ -44,9 +45,10 @@ export default function MenuManagementPage() {
         price: Math.round(Number(form.price) * 100),
         category: form.category,
         imageUrl: form.imageUrl.trim() || undefined,
+        zomatoPrice: form.zomatoPrice ? Math.round(Number(form.zomatoPrice) * 100) : undefined,
       }),
     });
-    setForm({ name: '', price: '', category: 'beverages', imageUrl: '' });
+    setForm({ name: '', price: '', category: 'beverages', imageUrl: '', zomatoPrice: '' });
     load();
   };
 
@@ -174,6 +176,12 @@ export default function MenuManagementPage() {
           value={form.imageUrl}
           onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
           className="flex-1 min-w-[140px] px-3 py-2 rounded-control border border-border text-sm"
+        />
+        <input
+          placeholder="Zomato/Swiggy price (₹)"
+          value={form.zomatoPrice}
+          onChange={(e) => setForm({ ...form, zomatoPrice: e.target.value })}
+          className="w-36 px-3 py-2 rounded-control border border-border text-sm"
         />
         <button type="button" onClick={addItem} className="px-4 py-2 rounded-control bg-primary text-white text-sm font-semibold">
           Add item

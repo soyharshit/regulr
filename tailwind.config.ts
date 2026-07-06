@@ -25,6 +25,12 @@ const config: Config = {
           silver: "#8E9BAE",
           gold: "#E6A817",
         },
+        lucky: {
+          red: "#E53935",
+          gold: "#FFD700",
+          cream: "#FFF8E1",
+          darkred: "#C62828",
+        },
       },
       borderRadius: {
         card: "12px",
@@ -35,6 +41,7 @@ const config: Config = {
         card: "0 8px 24px rgba(31,36,48,0.08)",
         pop: "0 12px 32px rgba(31,36,48,0.14)",
         glow: "0 0 24px rgba(255,107,74,0.25)",
+        "lucky-glow": "0 0 32px rgba(255,215,0,0.4)",
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],
@@ -80,6 +87,33 @@ const config: Config = {
           "70%": { transform: "scale(0.9)" },
           "100%": { transform: "scale(1)", opacity: "1" },
         },
+        "red-fall": {
+          "0%": { transform: "translateY(-10%) rotate(0deg)", opacity: "1" },
+          "100%": { transform: "translateY(110vh) rotate(720deg)", opacity: "0.6" },
+        },
+        "coin-burst": {
+          "0%": { transform: "scale(0) rotate(0deg)", opacity: "1" },
+          "50%": { transform: "scale(1.3) rotate(180deg)", opacity: "1" },
+          "100%": { transform: "scale(0) rotate(360deg)", opacity: "0" },
+        },
+        "box-open": {
+          "0%": { transform: "scale(1) rotateY(0deg)" },
+          "50%": { transform: "scale(1.1) rotateY(180deg)" },
+          "100%": { transform: "scale(1) rotateY(360deg)" },
+        },
+        "stamp-press": {
+          "0%": { transform: "scale(2) rotate(-15deg)", opacity: "0" },
+          "60%": { transform: "scale(0.9) rotate(3deg)", opacity: "1" },
+          "100%": { transform: "scale(1) rotate(0deg)", opacity: "1" },
+        },
+        "glow-pulse": {
+          "0%, 100%": { boxShadow: "0 0 20px rgba(255,215,0,0.3)" },
+          "50%": { boxShadow: "0 0 40px rgba(255,215,0,0.6)" },
+        },
+        "float-up": {
+          "0%": { transform: "translateY(0) scale(1)", opacity: "1" },
+          "100%": { transform: "translateY(-60px) scale(1.2)", opacity: "0" },
+        },
       },
       animation: {
         "shimmer": "shimmer 1.5s infinite",
@@ -88,6 +122,12 @@ const config: Config = {
         "scale-in": "scale-in 0.2s ease-out",
         "pulse-soft": "pulse-soft 2s ease-in-out infinite",
         "bounce-in": "bounce-in 0.5s ease-out",
+        "red-fall": "red-fall 3s linear infinite",
+        "coin-burst": "coin-burst 0.6s ease-out forwards",
+        "box-open": "box-open 0.8s ease-out",
+        "stamp-press": "stamp-press 0.4s ease-out forwards",
+        "glow-pulse": "glow-pulse 2s ease-in-out infinite",
+        "float-up": "float-up 1s ease-out forwards",
       },
     },
   },

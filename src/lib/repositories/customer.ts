@@ -62,12 +62,57 @@ export async function updatePoints(
   });
 }
 
+export interface PaginatedResult<T> {
+  data: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export interface CustomerListOptions {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+}
+
 export async function list(cafeId: string) {
   return db.customer.findMany({
     where: { cafeId },
     include: { user: true, orders: { orderBy: { createdAt: "desc" }, take: 5 } },
     orderBy: { points: "desc" },
   });
+}
+
+export async function listPaginated(
+  cafeId: string,
+  opts: CustomerListOptions = {}
+): Promise<PaginatedResult<Awaited<ReturnType<typeof list>>[number]>> {
+  const page = Math.max(1, opts.page || 1);
+  const pageSize = Math.min(100, Math.max(1, opts.pageSize || 20));
+
+  const where: Record<string, unknown> = { cafeId };
+  if (opts.search) {
+    where.user = {
+      OR: [
+        { name: { contains: opts.search } },
+        { email: { contains: opts.search } },
+      ],
+    };
+  }
+
+  const [data, total] = await Promise.all([
+    db.customer.findMany({
+      where,
+      include: { user: true, orders: { orderBy: { createdAt: "desc" }, take: 5 } },
+      orderBy: { points: "desc" },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+    db.customer.count({ where }),
+  ]);
+
+  return { data, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
 }
 
 export async function updateTier(cafeId: string, id: string, tier: string) {

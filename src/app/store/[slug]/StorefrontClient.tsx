@@ -2,13 +2,21 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ShoppingCart, Flame, Gift, Copy, Check, Minus, Plus, LogIn, Utensils, Receipt } from 'lucide-react';
+import { ShoppingCart, Flame, Gift, Copy, Check, Minus, Plus, LogIn, Utensils, Receipt, LogOut } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { StreakCalendar } from '@/components/StreakCalendar';
+import { DailyCheckIn } from '@/components/store/DailyCheckIn';
+import { FortuneBox } from '@/components/store/FortuneBox';
+import { WhatsAppShare } from '@/components/store/WhatsAppShare';
+import { getBrandStyles, getCoverStyle } from '@/lib/branding';
 
 interface Cafe {
   id: string;
   name: string;
   slug: string;
+  brandColor: string | null;
+  logoUrl: string | null;
+  coverImageUrl: string | null;
 }
 
 interface MenuItem {
@@ -16,6 +24,7 @@ interface MenuItem {
   name: string;
   description: string | null;
   price: number;
+  zomatoPrice: number | null;
   category: string;
   isAvailable: boolean;
   imageUrl?: string | null;
@@ -31,10 +40,12 @@ interface Loyalty {
   points: number;
   tier: string;
   streakCount: number;
+  streakCalendar: string;
   rewardsAvailable: number;
   progressPercent: number;
   pointsToNextTier: number;
   nextTier: string;
+  milestones: number[];
 }
 
 interface ReferralSummary {
@@ -91,6 +102,8 @@ export default function StorefrontClient({
   }, [tableNumber, cafe.id]);
 
   const categories = useMemo(() => Array.from(new Set(menuItems.map((m) => m.category))), [menuItems]);
+  const brandStyles = getBrandStyles(cafe.brandColor);
+  const coverStyle = getCoverStyle(cafe.coverImageUrl, cafe.brandColor);
 
   const addToCart = (menuItem: MenuItem) => {
     setCart((prev) => {
@@ -149,15 +162,10 @@ export default function StorefrontClient({
   };
 
   return (
-    <div className="min-h-screen bg-bg-subtle flex flex-col">
+    <div className="min-h-screen bg-bg-subtle flex flex-col" style={brandStyles}>
       {/* Cover */}
       <div className="relative w-full h-[160px] overflow-hidden">
-        <div
-          className="absolute inset-0"
-          style={{
-            background: 'linear-gradient(145deg, #2D1810 0%, #4A2C23 25%, #3E2118 50%, #5C3A2E 75%, #2D1810 100%)',
-          }}
-        />
+        <div className="absolute inset-0" style={coverStyle} />
         <div
           className="absolute inset-0"
           style={{
@@ -165,6 +173,16 @@ export default function StorefrontClient({
               'radial-gradient(ellipse at 30% 40%, rgba(255,180,100,0.25) 0%, transparent 60%), radial-gradient(ellipse at 70% 60%, rgba(200,120,60,0.15) 0%, transparent 50%)',
           }}
         />
+        {isSignedIn && (
+          <button
+            type="button"
+            onClick={() => { window.location.href = '/auth/signout'; }}
+            className="absolute top-3 right-3 z-20 w-9 h-9 rounded-full bg-red-600/80 hover:bg-red-600 flex items-center justify-center transition-colors"
+            title="Sign out"
+          >
+            <LogOut size={16} className="text-white" />
+          </button>
+        )}
         <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-bg-subtle to-transparent" />
       </div>
 
@@ -278,9 +296,125 @@ export default function StorefrontClient({
           )}
         </div>
 
-        {/* Referral */}
-        {isSignedIn && (
-          <div className="rounded-card bg-white shadow-card p-4 mt-3 space-y-3">
+        {/* Category tabs */}
+        <div className="flex gap-2 overflow-x-auto mt-5 mb-3 pb-1 -mx-1 px-1">
+          {categories.map((category) => (
+            <button
+              key={category}
+              type="button"
+              onClick={() => setActiveCategory(category)}
+              className={`px-4 py-2 rounded-pill text-sm font-medium whitespace-nowrap transition-colors capitalize ${
+                activeCategory === category ? 'bg-ink text-white' : 'bg-white text-ink-2 border border-border'
+              }`}
+            >
+              {category}
+            </button>
+          ))}
+        </div>
+
+        {/* Menu items */}
+        <div className="space-y-3">
+          {menuItems
+            .filter((item) => item.category === activeCategory)
+            .map((item) => {
+              const qty = quantityFor(item.id);
+              return (
+                <div key={item.id} data-testid="menu-item" className="bg-white rounded-card shadow-card p-4 flex items-center justify-between gap-3">
+                  {item.imageUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={item.imageUrl}
+                      alt={item.name}
+                      className="w-16 h-16 rounded-control object-cover flex-shrink-0"
+                    />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-semibold text-ink text-sm">{item.name}</h3>
+                    {item.description && (
+                      <p className="text-ink-3 text-xs mt-0.5 line-clamp-2">{item.description}</p>
+                    )}
+                    <div className="flex items-baseline gap-2 mt-1.5">
+                      <p className="text-ink font-semibold text-sm">{formatRupee(item.price)}</p>
+                      {item.zomatoPrice != null && item.zomatoPrice > item.price && (
+                        <p className="text-xs text-ink-3 line-through">{formatRupee(item.zomatoPrice)}</p>
+                      )}
+                      {item.zomatoPrice != null && item.zomatoPrice > item.price && (
+                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-success/10 text-success">
+                          Save {Math.round(((item.zomatoPrice - item.price) / item.zomatoPrice) * 100)}%
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {qty === 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => addToCart(item)}
+                      data-testid="add-item-btn"
+                      disabled={!item.isAvailable}
+                      className="shrink-0 px-4 py-2 rounded-control bg-primary-soft text-primary font-semibold text-sm hover:bg-primary hover:text-white transition-colors disabled:opacity-40"
+                    >
+                      {item.isAvailable ? 'Add' : 'Sold out'}
+                    </button>
+                  ) : (
+                    <div className="shrink-0 flex items-center gap-1 bg-primary rounded-control px-1">
+                      <button
+                        type="button"
+                        onClick={() => changeQuantity(item.id, -1)}
+                        className="w-8 h-8 flex items-center justify-center text-white"
+                        aria-label="Decrease quantity"
+                      >
+                        <Minus size={14} />
+                      </button>
+                      <span className="text-white text-sm font-semibold w-4 text-center">{qty}</span>
+                      <button
+                        type="button"
+                        onClick={() => addToCart(item)}
+                        className="w-8 h-8 flex items-center justify-center text-white"
+                        aria-label="Increase quantity"
+                      >
+                        <Plus size={14} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+        </div>
+      </div>
+
+      {/* Streak calendar */}
+      {isSignedIn && loyalty.streakCount > 0 && (
+        <div className="max-w-md w-full mx-auto px-4 mt-3">
+          <div className="rounded-card bg-white shadow-card p-4">
+            <p className="text-xs font-semibold text-ink-3 uppercase tracking-wide mb-2">Visit streak</p>
+            <StreakCalendar
+              streakCalendar={JSON.parse(loyalty.streakCalendar || '[]')}
+              streakCount={loyalty.streakCount}
+              milestones={loyalty.milestones}
+              compact
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Daily Check-in */}
+      {isSignedIn && (
+        <div className="max-w-md w-full mx-auto px-4 mt-3">
+          <DailyCheckIn slug={cafe.slug} />
+        </div>
+      )}
+
+      {/* Fortune Box */}
+      {isSignedIn && (
+        <div className="max-w-md w-full mx-auto px-4 mt-3">
+          <FortuneBox slug={cafe.slug} />
+        </div>
+      )}
+
+      {/* Referral */}
+      {isSignedIn && (
+        <div className="max-w-md w-full mx-auto px-4 mt-3">
+          <div className="rounded-card bg-white shadow-card p-4 space-y-3">
             <div className="flex items-center gap-2.5">
               <div className="w-9 h-9 rounded-control bg-violet/10 flex items-center justify-center">
                 <Gift size={16} className="text-violet" />
@@ -328,82 +462,12 @@ export default function StorefrontClient({
               </p>
             )}
           </div>
-        )}
-
-        {/* Category tabs */}
-        <div className="flex gap-2 overflow-x-auto mt-5 mb-3 pb-1 -mx-1 px-1">
-          {categories.map((category) => (
-            <button
-              key={category}
-              type="button"
-              onClick={() => setActiveCategory(category)}
-              className={`px-4 py-2 rounded-pill text-sm font-medium whitespace-nowrap transition-colors capitalize ${
-                activeCategory === category ? 'bg-ink text-white' : 'bg-white text-ink-2 border border-border'
-              }`}
-            >
-              {category}
-            </button>
-          ))}
         </div>
+      )}
 
-        {/* Menu items */}
-        <div className="space-y-3">
-          {menuItems
-            .filter((item) => item.category === activeCategory)
-            .map((item) => {
-              const qty = quantityFor(item.id);
-              return (
-                <div key={item.id} data-testid="menu-item" className="bg-white rounded-card shadow-card p-4 flex items-center justify-between gap-3">
-                  {item.imageUrl && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={item.imageUrl}
-                      alt={item.name}
-                      className="w-16 h-16 rounded-control object-cover flex-shrink-0"
-                    />
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <h3 className="font-semibold text-ink text-sm">{item.name}</h3>
-                    {item.description && (
-                      <p className="text-ink-3 text-xs mt-0.5 line-clamp-2">{item.description}</p>
-                    )}
-                    <p className="text-ink font-semibold text-sm mt-1.5">{formatRupee(item.price)}</p>
-                  </div>
-                  {qty === 0 ? (
-                    <button
-                      type="button"
-                      onClick={() => addToCart(item)}
-                      data-testid="add-item-btn"
-                      disabled={!item.isAvailable}
-                      className="shrink-0 px-4 py-2 rounded-control bg-primary-soft text-primary font-semibold text-sm hover:bg-primary hover:text-white transition-colors disabled:opacity-40"
-                    >
-                      {item.isAvailable ? 'Add' : 'Sold out'}
-                    </button>
-                  ) : (
-                    <div className="shrink-0 flex items-center gap-1 bg-primary rounded-control px-1">
-                      <button
-                        type="button"
-                        onClick={() => changeQuantity(item.id, -1)}
-                        className="w-8 h-8 flex items-center justify-center text-white"
-                        aria-label="Decrease quantity"
-                      >
-                        <Minus size={14} />
-                      </button>
-                      <span className="text-white text-sm font-semibold w-4 text-center">{qty}</span>
-                      <button
-                        type="button"
-                        onClick={() => addToCart(item)}
-                        className="w-8 h-8 flex items-center justify-center text-white"
-                        aria-label="Increase quantity"
-                      >
-                        <Plus size={14} />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-        </div>
+      {/* WhatsApp Share */}
+      <div className="px-4 pb-4">
+        <WhatsAppShare slug={cafe.slug} cafeName={cafe.name} variant="button" />
       </div>
 
       {/* Sticky cart bar */}

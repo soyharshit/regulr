@@ -9,6 +9,20 @@ export async function GET(request: NextRequest) {
   const auth = await requireCafe(slug);
   if ("error" in auth) return auth.error;
 
+  const url = request.nextUrl;
+  const page = url.searchParams.get("page");
+  const limit = url.searchParams.get("limit");
+  const search = url.searchParams.get("search");
+
+  if (page || limit || search) {
+    const result = await customerRepo.listPaginated(auth.cafe.id, {
+      page: page ? Number(page) : 1,
+      pageSize: limit ? Number(limit) : 20,
+      search: search || undefined,
+    });
+    return NextResponse.json(result);
+  }
+
   const customers = await customerRepo.list(auth.cafe.id);
   return NextResponse.json(customers);
 }

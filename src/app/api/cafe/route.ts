@@ -14,7 +14,31 @@ export async function GET(request: NextRequest) {
   return NextResponse.json(cafe);
 }
 
-// Owner (or superadmin acting for a cafe) updates their own cafe profile.
+export async function PUT(request: NextRequest) {
+  const session = await getServerSession(authOptions);
+  const user = session?.user as { role?: string; cafeId?: string } | undefined;
+  if (!user || user.role !== 'OWNER') {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const body = await request.json();
+  const { brandColor, logoUrl, coverImageUrl } = body;
+
+  const cafe = await cafeRepo.resolveCafeForSession(session);
+  if (!cafe) return NextResponse.json({ error: 'Cafe not found' }, { status: 404 });
+
+  const updated = await db.cafe.update({
+    where: { id: cafe.id },
+    data: {
+      brandColor: brandColor !== undefined ? brandColor : cafe.brandColor,
+      logoUrl: logoUrl !== undefined ? logoUrl : cafe.logoUrl,
+      coverImageUrl: coverImageUrl !== undefined ? coverImageUrl : cafe.coverImageUrl,
+    },
+  });
+
+  return NextResponse.json({ brandColor: updated.brandColor, logoUrl: updated.logoUrl, coverImageUrl: updated.coverImageUrl });
+}
+
 export async function PATCH(request: NextRequest) {
   const session = await getServerSession(authOptions);
   const role = (session?.user as { role?: string } | undefined)?.role;
@@ -22,9 +46,6 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // The cafe is resolved from the session (owner's cafe / superadmin's
-  // impersonated cafe), never from the request body — an owner can only ever
-  // edit their own cafe.
   const cafe = await cafeRepo.resolveCafeForSession(session);
   if (!cafe) return NextResponse.json({ error: 'Cafe not found' }, { status: 404 });
 

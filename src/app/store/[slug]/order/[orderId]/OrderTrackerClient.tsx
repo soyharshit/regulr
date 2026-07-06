@@ -3,6 +3,9 @@
 import { useEffect, useState } from 'react';
 import confetti from 'canvas-confetti';
 import { Check, Download } from 'lucide-react';
+import { SpinWheel } from '@/components/store/SpinWheel';
+import { RedPacketRain } from '@/components/store/RedPacketRain';
+import { WhatsAppShare } from '@/components/store/WhatsAppShare';
 
 const STATUS_STEPS = ['PENDING', 'PREPARING', 'READY', 'COMPLETED'];
 const STATUS_LABELS: Record<string, string> = {
@@ -85,6 +88,14 @@ function formatRupee(paise: number): string {
 export default function OrderTrackerClient({ cafe, order }: { cafe: { name: string; slug: string }; order: Order }) {
   const [status, setStatus] = useState(order.status);
   const [pointsEarned, setPointsEarned] = useState(order.pointsEarned);
+  const [rewardMode] = useState<"scratch" | "spin" | "redpacket">(() => {
+    const r = Math.random();
+    if (r < 0.34) return "scratch";
+    if (r < 0.67) return "spin";
+    return "redpacket";
+  });
+  const [bonusClaimed, setBonusClaimed] = useState(!!order.scratchedAt);
+  const [claimedBonus, setClaimedBonus] = useState(order.bonusPoints);
 
   useEffect(() => {
     // Stop polling on any terminal state.
@@ -129,14 +140,46 @@ export default function OrderTrackerClient({ cafe, order }: { cafe: { name: stri
                 <p className="text-4xl font-bold my-1">{pointsEarned}</p>
                 <p className="text-xs font-semibold uppercase tracking-wider">Loyalty points</p>
               </div>
-              {order.customerId && (
-                <ScratchCard
-                  orderId={order.id}
-                  initialBonus={order.bonusPoints}
-                  initialScratched={!!order.scratchedAt}
-                />
+              {order.customerId && !bonusClaimed && (
+                rewardMode === "spin" ? (
+                  <div className="mt-4">
+                    <SpinWheel
+                      orderId={order.id}
+                      cafeId=""
+                      onClaimed={(bonus) => {
+                        setBonusClaimed(true);
+                        setClaimedBonus(bonus);
+                      }}
+                    />
+                  </div>
+                ) : rewardMode === "redpacket" ? (
+                  <div className="mt-4">
+                    <RedPacketRain
+                      orderId={order.id}
+                      cafeId=""
+                      onComplete={(pts) => {
+                        setBonusClaimed(true);
+                        setClaimedBonus(pts);
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <ScratchCard
+                    orderId={order.id}
+                    initialBonus={order.bonusPoints}
+                    initialScratched={!!order.scratchedAt}
+                  />
+                )
               )}
-              <div className="mt-4">
+              {bonusClaimed && rewardMode !== "scratch" && (
+                <div className="mt-4 rounded-card border-2 border-dashed border-primary/40 bg-primary-soft p-4 text-center animate-in zoom-in-95">
+                  <p className="text-xs font-semibold text-primary uppercase tracking-wide mb-2">Surprise reward 🎁</p>
+                  <p className="text-3xl font-bold text-primary">+{claimedBonus}</p>
+                  <p className="text-xs text-ink-2 mt-0.5">bonus points added — see you next time!</p>
+                </div>
+              )}
+              <div className="mt-4 flex flex-col gap-3 items-center">
+                <WhatsAppShare slug={cafe.slug} cafeName={cafe.name} variant="button" />
                 <a href={`/store/${cafe.slug}/rewards`} className="text-sm font-semibold text-primary">
                   Redeem points for rewards →
                 </a>

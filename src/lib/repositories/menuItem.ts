@@ -1,11 +1,44 @@
 import { db } from "../db";
 import { MenuItem, Prisma } from "@prisma/client";
 
+export interface PaginatedResult<T> {
+  data: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export interface MenuItemListOptions {
+  page?: number;
+  pageSize?: number;
+}
+
 export async function list(cafeId: string): Promise<MenuItem[]> {
   return db.menuItem.findMany({
     where: { cafeId },
     orderBy: [{ category: "asc" }, { createdAt: "desc" }],
   });
+}
+
+export async function listPaginated(
+  cafeId: string,
+  opts: MenuItemListOptions = {}
+): Promise<PaginatedResult<MenuItem>> {
+  const page = Math.max(1, opts.page || 1);
+  const pageSize = Math.min(200, Math.max(1, opts.pageSize || 50));
+
+  const [data, total] = await Promise.all([
+    db.menuItem.findMany({
+      where: { cafeId },
+      orderBy: [{ category: "asc" }, { createdAt: "desc" }],
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+    db.menuItem.count({ where: { cafeId } }),
+  ]);
+
+  return { data, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
 }
 
 export async function listBySlug(slug: string): Promise<MenuItem[]> {

@@ -15,6 +15,7 @@ import {
   ArrowDownRight,
   ChevronDown,
 } from 'lucide-react';
+import { Pagination } from '@/components/Pagination';
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                           */
@@ -224,6 +225,8 @@ export default function AdminDashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [cafePage, setCafePage] = useState(1);
+  const CAFE_PAGE_SIZE = 10;
 
   useEffect(() => {
     fetch('/api/admin/summary')
@@ -265,6 +268,9 @@ export default function AdminDashboard() {
       cafe.city.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesFilter && matchesSearch;
   });
+
+  const cafeTotalPages = Math.ceil(filteredCafes.length / CAFE_PAGE_SIZE);
+  const paginatedCafes = filteredCafes.slice((cafePage - 1) * CAFE_PAGE_SIZE, cafePage * CAFE_PAGE_SIZE);
 
   const statusFilters = data?.cafes ? [
     { label: 'All', value: 'all' as const, count: data.cafes.length },
@@ -349,15 +355,26 @@ export default function AdminDashboard() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="h-9 w-full sm:w-[220px] pl-9 pr-3 rounded-control border border-border bg-bg-subtle text-sm text-ink placeholder:text-ink-3 focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/20 focus:border-[#6C5CE7] transition-all duration-150"
                 />
-              </div>
+          </div>
+
+          {/* Pagination */}
+          {cafeTotalPages > 1 && (
+            <div className="px-5 py-4 border-t border-border">
+              <Pagination
+                page={cafePage}
+                totalPages={cafeTotalPages}
+                onPageChange={setCafePage}
+              />
             </div>
+          )}
+        </div>
 
             {/* Status filter chips */}
             <div className="flex flex-wrap gap-2 mt-4">
               {statusFilters.map((filter) => (
                 <button
                   key={filter.value}
-                  onClick={() => setActiveFilter(filter.value)}
+                  onClick={() => { setActiveFilter(filter.value); setCafePage(1); }}
                   className={`
                     inline-flex items-center gap-1.5 h-8 px-3 rounded-pill text-sm font-medium
                     transition-all duration-150 ease-out press-scale
@@ -432,7 +449,7 @@ export default function AdminDashboard() {
                     </td>
                   </tr>
                 )}
-                {!loading && filteredCafes.map((cafe: any) => (
+                {!loading && paginatedCafes.map((cafe: any) => (
                   <tr
                     key={cafe.slug}
                     className="group hover:bg-bg-subtle/60 transition-colors duration-100"
@@ -517,7 +534,7 @@ export default function AdminDashboard() {
                 No cafes match your filters
               </div>
             )}
-            {!loading && filteredCafes.map((cafe: any) => (
+            {!loading && paginatedCafes.map((cafe: any) => (
               <div key={cafe.slug} className="p-4 space-y-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">

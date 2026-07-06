@@ -20,12 +20,49 @@ export type OrderWithItemsAndCustomer = Prisma.OrderGetPayload<typeof withItemsA
 export type OrderWithItems = Prisma.OrderGetPayload<typeof withItems>;
 export type OrderWithPlainItems = Prisma.OrderGetPayload<typeof withPlainItems>;
 
+export interface PaginatedResult<T> {
+  data: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export interface OrderListOptions {
+  page?: number;
+  pageSize?: number;
+  status?: string;
+}
+
 export async function list(cafeId: string): Promise<OrderWithItemsAndCustomer[]> {
   return db.order.findMany({
     where: { cafeId },
     ...withItemsAndCustomer,
     orderBy: { createdAt: "desc" },
   });
+}
+
+export async function listPaginated(
+  cafeId: string,
+  opts: OrderListOptions = {}
+): Promise<PaginatedResult<OrderWithItemsAndCustomer>> {
+  const page = Math.max(1, opts.page || 1);
+  const pageSize = Math.min(100, Math.max(1, opts.pageSize || 20));
+  const where: Record<string, unknown> = { cafeId };
+  if (opts.status) where.status = opts.status;
+
+  const [data, total] = await Promise.all([
+    db.order.findMany({
+      where,
+      ...withItemsAndCustomer,
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+    db.order.count({ where }),
+  ]);
+
+  return { data, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
 }
 
 export async function getById(cafeId: string, id: string): Promise<OrderWithItemsAndCustomer | null> {

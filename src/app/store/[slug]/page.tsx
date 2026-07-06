@@ -5,6 +5,7 @@ import { getBySlug } from '@/lib/repositories/cafe';
 import { listBySlug } from '@/lib/repositories/menuItem';
 import * as customerRepo from '@/lib/repositories/customer';
 import * as referralRepo from '@/lib/repositories/referral';
+import * as cafeSettingsRepo from '@/lib/repositories/cafeSettings';
 import { TIER_THRESHOLDS, nextTier, tierForPoints, REFERRAL_REFERRER_BONUS, REFERRAL_REFERRED_BONUS } from '@/lib/loyalty';
 import { referralCodeForCustomer } from '@/lib/repositories/referralCode';
 import StorefrontClient from './StorefrontClient';
@@ -45,10 +46,12 @@ export default async function StorefrontPage({
     points: 0,
     tier: 'BRONZE',
     streakCount: 0,
+    streakCalendar: '[]',
     rewardsAvailable: 0,
     progressPercent: 0,
     pointsToNextTier: TIER_THRESHOLDS.SILVER,
     nextTier: 'SILVER',
+    milestones: [3, 7, 14, 30],
   };
   let referral = {
     referralCode: null as string | null,
@@ -73,10 +76,12 @@ export default async function StorefrontPage({
         points: customer.points,
         tier,
         streakCount: customer.streakCount,
+        streakCalendar: customer.streakCalendar,
         rewardsAvailable: Math.floor(customer.points / 100),
         progressPercent: progress,
         pointsToNextTier: next ? Math.max(0, next.pointsNeeded - customer.points) : 0,
         nextTier: next?.tier ?? tier,
+        milestones: (await cafeSettingsRepo.getByCafeId(cafe.id)).streakMilestones,
       };
 
       const referrals = await referralRepo.list(cafe.id);
